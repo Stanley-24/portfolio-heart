@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     # Server Configuration
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = int(os.getenv("PORT", 10000)) 
     DEBUG: bool = True
     
     # Database Configuration (from .env)
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS
-    CORS_ORIGINS: list = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: list = [os.getenv("FRONTEND_URL", "http://localhost:5173"), "http://localhost:3000"]
     
     # File Upload
     UPLOAD_DIR: str = "uploads"
