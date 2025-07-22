@@ -1,0 +1,24 @@
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy.sql import func
+from ..core.database import Base
+
+class ContactMessage(Base):
+    __tablename__ = "contact_messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    subject = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    phone = Column(String(50), nullable=True)
+    company = Column(String(255), nullable=True)
+    is_read = Column(Boolean, default=False)
+    is_replied = Column(Boolean, default=False)
+    ip_address = Column(String(45), nullable=True)  # IPv6 compatible
+    user_agent = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    read_at = Column(DateTime(timezone=True), nullable=True)
+    replied_at = Column(DateTime(timezone=True), nullable=True)
+    
+    def __repr__(self):
+        return f"<ContactMessage(id={self.id}, name='{self.name}', email='{self.email}')>" 

@@ -1,0 +1,75 @@
+from fastapi import APIRouter, HTTPException, Depends
+from typing import List
+from app.schemas.contact import BookCall, BookCallCreate, Message, MessageCreate
+import uuid
+from datetime import datetime
+from app.routes.auth import get_current_admin
+
+router = APIRouter()
+
+# Fake in-memory DBs
+fake_bookcall_db = []
+fake_message_db = []
+
+# Helper: validate book call fields
+def validate_bookcall(data: BookCallCreate):
+    if not data.name or not data.email or not data.phone or not data.preferred_datetime or not data.video_call_provider:
+        raise HTTPException(status_code=400, detail="All fields except message and link are required.")
+
+# Helper: validate message fields
+def validate_message(data: MessageCreate):
+    if not data.name or not data.email or not data.message:
+        raise HTTPException(status_code=400, detail="Name, email, and message are required.")
+
+@router.post("/book", summary="Book a Call")
+def book_call(data: BookCallCreate):
+    missing = []
+    if not data.name:
+        missing.append("name")
+    if not data.email:
+        missing.append("email")
+    if not data.preferred_datetime:
+        missing.append("preferred_datetime")
+    if not data.video_call_provider:
+        missing.append("video_call_provider")
+    if missing:
+        return {"message": f"Missing required fields: {', '.join(missing)}", "success": False}
+    allowed_providers = {"google_meet", "zoom", "teams"}
+    if data.video_call_provider not in allowed_providers:
+        return {"message": f"Invalid video_call_provider. Allowed: {', '.join(allowed_providers)}", "success": False}
+    new_id = str(uuid.uuid4())
+    now = datetime.utcnow().isoformat()
+    payload = {**data.model_dump(), "video_call_link": None}
+    new_call = BookCall(
+        id=new_id,
+        contacted_at=now,
+        calendar_event_id=None,
+        **payload
+    )
+    fake_bookcall_db.append(new_call)
+    return {"message": "Call booked successfully.", "call": new_call, "success": True}
+
+@router.get("/bookings", response_model=List[BookCall], summary="List Booked Calls")
+def list_booked_calls():
+    return fake_bookcall_db
+
+@router.post("/message", summary="Send Message")
+def send_message(data: MessageCreate):
+    missing = []
+    if not data.name:
+        missing.append("name")
+    if not data.email:
+        missing.append("email")
+    if not data.message:
+        missing.append("message")
+    if missing:
+        return {"message": f"Missing required fields: {', '.join(missing)}", "success": False}
+    new_id = str(uuid.uuid4())
+    now = datetime.utcnow().isoformat()
+    new_msg = Message(id=new_id, sent_at=now, **data.model_dump())
+    fake_message_db.append(new_msg)
+    return {"message": "Message sent successfully.", "message_data": new_msg, "success": True}
+
+@router.get("/messages", response_model=List[Message], summary="List Messages")
+def list_messages():
+    return fake_message_db 
