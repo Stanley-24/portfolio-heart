@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     
     # CORS
     CORS_ORIGINS: list = [os.getenv("FRONTEND_URL", "http://localhost:5173"), "http://localhost:3000"]
+    FRONTEND_URL: str = "https://stanley-o.vercel.app/"
     
     # File Upload
     UPLOAD_DIR: str = "uploads"
