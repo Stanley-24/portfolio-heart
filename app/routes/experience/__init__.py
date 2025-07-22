@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.routes.auth import get_current_admin
 import uuid
 from datetime import date
+from dateutil.parser import parse as parse_date
 
 router = APIRouter()
 
@@ -61,15 +62,15 @@ def create_experience(exp: ExperienceCreate, db: Session = Depends(get_db), admi
         return {"message": str(e.detail), "success": False}
     try:
         start_str, end_str = [s.strip() for s in exp.dateRange.split('-')]
-        start_date = date.fromisoformat(f"{start_str} 01") if len(start_str.split()) == 2 else date.today()
-        if end_str.lower() == "present":
+        start_date = parse_date(start_str, default=date.today().replace(day=1)).date()
+        if end_str.lower() in ["present", "now"]:
             end_date = None
             is_current = True
         else:
-            end_date = date.fromisoformat(f"{end_str} 01") if len(end_str.split()) == 2 else date.today()
+            end_date = parse_date(end_str, default=date.today().replace(day=1)).date()
             is_current = False
     except Exception:
-        return {"message": "Invalid dateRange format. Use 'Mon YYYY - Mon YYYY' or 'Mon YYYY - Present'", "success": False}
+        return {"message": "Invalid dateRange format. Please use a recognizable date format like 'Feb 2024 - Present' or '2024-02 - 2025-01'.", "success": False}
     db_exp = ExperienceModel(
         title=exp.title,
         company=exp.company,
@@ -101,15 +102,15 @@ def update_experience(exp_id: str, exp: ExperienceUpdate, db: Session = Depends(
         return {"message": str(e.detail), "success": False}
     try:
         start_str, end_str = [s.strip() for s in exp.dateRange.split('-')]
-        start_date = date.fromisoformat(f"{start_str} 01") if len(start_str.split()) == 2 else date.today()
-        if end_str.lower() == "present":
+        start_date = parse_date(start_str, default=date.today().replace(day=1)).date()
+        if end_str.lower() in ["present", "now"]:
             end_date = None
             is_current = True
         else:
-            end_date = date.fromisoformat(f"{end_str} 01") if len(end_str.split()) == 2 else date.today()
+            end_date = parse_date(end_str, default=date.today().replace(day=1)).date()
             is_current = False
     except Exception:
-        return {"message": "Invalid dateRange format. Use 'Mon YYYY - Mon YYYY' or 'Mon YYYY - Present'", "success": False}
+        return {"message": "Invalid dateRange format. Please use a recognizable date format like 'Feb 2024 - Present' or '2024-02 - 2025-01'.", "success": False}
     db_exp.title = exp.title
     db_exp.company = exp.company
     db_exp.company_website = exp.url
