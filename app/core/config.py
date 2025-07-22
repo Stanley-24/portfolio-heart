@@ -34,7 +34,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS
-    CORS_ORIGINS: list = [os.getenv("FRONTEND_URL", "http://localhost:5173"), "http://localhost:3000"]
+    CORS_ORIGINS: list = [
+        "https://stanley-o.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000"
+    ]
     FRONTEND_URL: str = "https://stanley-o.vercel.app/"
     
     # File Upload
