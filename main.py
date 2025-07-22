@@ -13,6 +13,13 @@ from app.routes.email import email
 from app.routes.chatbot import chatbot
 from app.routes.leads import leads
 from sqlalchemy import create_engine
+from app.core.database import Base
+import app.models.experience
+import app.models.project
+import app.models.review
+import app.models.newsletter
+import app.models.contact
+import app.models.resume
 
 # SMTP/Email startup check
 required_smtp_vars = [
@@ -53,6 +60,10 @@ try:
     engine = create_engine(settings.DATABASE_URL)
     with engine.connect() as conn:
         print("[DATABASE CONNECTION SUCCESSFUL]")
+    # Auto-create all tables
+    print("[AUTO-CREATING ALL TABLES IF NOT EXIST]")
+    Base.metadata.create_all(engine)
+    print("[TABLE CREATION COMPLETE]")
 except Exception as e:
     print(f"[DATABASE CONNECTION FAILED] {e}")
 
