@@ -3,7 +3,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from app.models.lead import Lead
+from app.models.contact import Lead
 from app.core.database import SessionLocal, Base, engine
 from app.routes.auth import get_current_admin
 

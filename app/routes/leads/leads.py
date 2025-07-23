@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.lead import Lead
+from app.models.contact import Lead
 from app.schemas.lead import LeadCreate, LeadOut
 from app.routes.auth import get_current_admin
 from typing import List
