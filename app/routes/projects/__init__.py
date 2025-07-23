@@ -21,16 +21,18 @@ def validate_project(data: ProjectCreate):
         raise HTTPException(status_code=400, detail="At least one technology is required.")
 
 def camel_to_snake(data):
+    def to_str(val):
+        return str(val) if val is not None else None
     return {
         "title": data.get("title"),
         "description": data.get("description"),
-        "thumbnail": data.get("thumbnail"),
+        "thumbnail": to_str(data.get("thumbnail")),
         "short_description": data.get("shortDescription"),
         "technologies": data.get("technologies"),
-        "image_url": data.get("imageUrl"),
-        "github_url": data.get("githubUrl"),
-        "live_url": data.get("liveUrl"),
-        "demo_url": data.get("demoUrl"),
+        "image_url": to_str(data.get("imageUrl")),
+        "github_url": to_str(data.get("githubUrl")),
+        "live_url": to_str(data.get("liveUrl")),
+        "demo_url": to_str(data.get("demoUrl")),
         "featured": data.get("featured"),
         "category": data.get("category"),
         "difficulty": data.get("difficulty"),
