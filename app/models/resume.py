@@ -25,3 +25,12 @@ class Resume(Base):
     
     def __repr__(self):
         return f"<Resume(id={self.id}, name='{self.name}')>" 
+
+class ResumeStats(Base):
+    __tablename__ = "resume_stats"
+    id = Column(Integer, primary_key=True, index=True)
+    downloads = Column(Integer, default=0)
+    views = Column(Integer, default=0)
+    last_download = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now()) 

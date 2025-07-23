@@ -1,13 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from app.schemas.review import Review, ReviewCreate, ReviewUpdate
-import uuid
+from app.schemas.review import Review as ReviewSchema, ReviewCreate, ReviewUpdate
+from app.models.review import Review
+from app.core.database import get_db
+from sqlalchemy.orm import Session
 from app.routes.auth import get_current_admin
 
 router = APIRouter()
-
-# Fake in-memory DB
-fake_review_db = []
 
 # Helper: validate review fields
 def validate_review(data: ReviewCreate):
@@ -16,39 +15,42 @@ def validate_review(data: ReviewCreate):
     if not (1 <= data.rating <= 5):
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
 
-@router.get("/", response_model=List[Review], summary="List Reviews")
-def list_reviews():
-    """List all reviews."""
-    return fake_review_db
+@router.get("/", response_model=List[ReviewSchema], summary="List Reviews")
+def list_reviews(db: Session = Depends(get_db)):
+    return db.query(Review).all()
 
 @router.post("/", summary="Add Review")
-def create_review(data: ReviewCreate):
+def create_review(data: ReviewCreate, db: Session = Depends(get_db)):
     try:
         validate_review(data)
     except HTTPException as e:
         return {"message": str(e.detail), "success": False}
-    new_id = str(uuid.uuid4())
-    new_review = Review(id=new_id, **data.model_dump())
-    fake_review_db.append(new_review)
+    new_review = Review(**data.model_dump())
+    db.add(new_review)
+    db.commit()
+    db.refresh(new_review)
     return {"message": "Review created successfully.", "success": True, "review": new_review}
 
 @router.put("/{review_id}", summary="Update Review")
-def update_review(review_id: str, data: ReviewUpdate):
+def update_review(review_id: int, data: ReviewUpdate, db: Session = Depends(get_db)):
     try:
         validate_review(data)
     except HTTPException as e:
         return {"message": str(e.detail), "success": False}
-    for i, old_review in enumerate(fake_review_db):
-        if old_review.id == review_id:
-            updated_review = Review(id=review_id, **data.model_dump())
-            fake_review_db[i] = updated_review
-            return {"message": "Review updated successfully.", "success": True, "review": updated_review}
-    return {"message": "Review not found", "success": False}
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        return {"message": "Review not found", "success": False}
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(review, key, value)
+    db.commit()
+    db.refresh(review)
+    return {"message": "Review updated successfully.", "success": True, "review": review}
 
 @router.delete("/{review_id}", status_code=200, summary="Delete Review")
-def delete_review(review_id: str, admin=Depends(get_current_admin)):
-    for i, review in enumerate(fake_review_db):
-        if review.id == review_id:
-            del fake_review_db[i]
-            return {"message": "Review deleted successfully.", "success": True}
-    return {"message": "Review not found", "success": False} 
+def delete_review(review_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        return {"message": "Review not found", "success": False}
+    db.delete(review)
+    db.commit()
+    return {"message": "Review deleted successfully.", "success": True} 
