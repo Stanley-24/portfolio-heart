@@ -1,16 +1,16 @@
-from pydantic import BaseModel, HttpUrl, validator
+from pydantic import BaseModel, HttpUrl, validator, Field
 from typing import List, Optional
 from datetime import datetime
 
 class ProjectBase(BaseModel):
     title: str
     description: str
-    thumbnail: HttpUrl
+    thumbnail: Optional[HttpUrl] = None
     technologies: List[str]
-    githubUrl: HttpUrl
-    liveUrl: HttpUrl
+    githubUrl: Optional[HttpUrl] = Field(None, alias="github_url")
+    liveUrl: Optional[HttpUrl] = Field(None, alias="live_url")
     featured: bool = False
-    createdAt: str
+    createdAt: Optional[str] = Field(None, alias="created_at")
     featuredAt: Optional[str] = None
 
     @validator("createdAt", "featuredAt", pre=True, always=True)
@@ -24,6 +24,10 @@ class ProjectBase(BaseModel):
                 continue
         raise ValueError("Date must be in YYYY-MM-DD format")
 
+    class Config:
+        allow_population_by_field_name = True
+        from_attributes = True
+
 class ProjectCreate(ProjectBase):
     pass
 
@@ -31,7 +35,8 @@ class ProjectUpdate(ProjectBase):
     pass
 
 class Project(ProjectBase):
-    id: str
+    id: int  # Changed from str to int
 
     class Config:
+        allow_population_by_field_name = True
         from_attributes = True 
