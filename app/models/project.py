@@ -8,6 +8,7 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
+    thumbnail = Column(String(500), nullable=True)
     short_description = Column(String(500), nullable=True)
     technologies = Column(JSON, nullable=True)  # Array of technologies
     image_url = Column(String(500), nullable=True)
