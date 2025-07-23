@@ -20,6 +20,25 @@ def validate_project(data: ProjectCreate):
     if not isinstance(data.technologies, list) or len(data.technologies) == 0:
         raise HTTPException(status_code=400, detail="At least one technology is required.")
 
+def camel_to_snake(data):
+    return {
+        "title": data.get("title"),
+        "description": data.get("description"),
+        "thumbnail": data.get("thumbnail"),
+        "short_description": data.get("shortDescription"),
+        "technologies": data.get("technologies"),
+        "image_url": data.get("imageUrl"),
+        "github_url": data.get("githubUrl"),
+        "live_url": data.get("liveUrl"),
+        "demo_url": data.get("demoUrl"),
+        "featured": data.get("featured"),
+        "category": data.get("category"),
+        "difficulty": data.get("difficulty"),
+        "completion_date": data.get("completionDate"),
+        "created_at": data.get("createdAt"),
+        # Add more mappings as needed
+    }
+
 @router.get("/", response_model=List[ProjectSchema], summary="List Projects")
 def list_projects(db: Session = Depends(get_db)):
     projects = db.query(Project).all()
@@ -28,7 +47,8 @@ def list_projects(db: Session = Depends(get_db)):
 @router.post("/", summary="Add Project")
 def create_project(data: ProjectCreate, db: Session = Depends(get_db), admin: Any = Depends(get_current_admin)):
     validate_project(data)
-    new_project = Project(**data.model_dump())
+    snake_data = camel_to_snake(data.model_dump())
+    new_project = Project(**{k: v for k, v in snake_data.items() if v is not None})
     db.add(new_project)
     db.commit()
     db.refresh(new_project)
@@ -39,8 +59,10 @@ def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(g
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         return {"message": "Project not found", "success": False}
-    for key, value in data.model_dump(exclude_unset=True).items():
-        setattr(project, key, value)
+    snake_data = camel_to_snake(data.model_dump(exclude_unset=True))
+    for key, value in snake_data.items():
+        if value is not None:
+            setattr(project, key, value)
     db.commit()
     db.refresh(project)
     return {"message": "Project updated successfully.", "success": True, "project": project}
