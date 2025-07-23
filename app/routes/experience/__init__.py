@@ -70,8 +70,9 @@ def create_experience(exp: ExperienceCreate, db: Session = Depends(get_db), admi
         else:
             end_date = parse_date(end_str, default=date.today().replace(day=1)).date()
             is_current = False
-    except Exception:
-        return {"message": "Invalid dateRange format. Please use a recognizable date format like 'Feb 2024 - Present' or '2024-02 - 2025-01'.", "success": False}
+    except Exception as e:
+        print(f"DATE PARSE ERROR: {e}")
+        return {"message": f"Could not understand the date range you entered: '{exp.dateRange}'. Please try again.", "success": False}
     db_exp = ExperienceModel(
         title=exp.title,
         company=exp.company,
