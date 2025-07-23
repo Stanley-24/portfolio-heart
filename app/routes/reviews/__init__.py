@@ -33,7 +33,7 @@ def create_review(data: ReviewCreate):
     return {"message": "Review created successfully.", "success": True, "review": new_review}
 
 @router.put("/{review_id}", summary="Update Review")
-def update_review(review_id: str, data: ReviewUpdate, admin=Depends(get_current_admin)):
+def update_review(review_id: str, data: ReviewUpdate):
     try:
         validate_review(data)
     except HTTPException as e:
