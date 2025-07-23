@@ -1,8 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from typing import List, Any
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate
 import uuid
 from app.routes.auth import get_current_admin
+import os
+from .upload_thumbnail import router as upload_thumbnail_router
 
 router = APIRouter()
 
@@ -56,4 +58,6 @@ def delete_project(project_id: str, admin=Depends(get_current_admin)):
         if project.id == project_id:
             del fake_project_db[i]
             return {"message": "Project deleted successfully.", "success": True}
-    return {"message": "Project not found", "success": False} 
+    return {"message": "Project not found", "success": False}
+
+router.include_router(upload_thumbnail_router) 
