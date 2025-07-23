@@ -56,6 +56,7 @@ def list_experiences(db: Session = Depends(get_db)):
 
 @router.post("/", summary="Add Experience")
 def create_experience(exp: ExperienceCreate, db: Session = Depends(get_db), admin: Any = Depends(get_current_admin)):
+    print("USING FLEXIBLE DATE PARSING - create_experience")
     try:
         emoji = get_emoji(exp.icon)
     except HTTPException as e:
