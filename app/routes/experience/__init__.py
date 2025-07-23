@@ -6,7 +6,7 @@ from app.core.database import get_db
 from sqlalchemy.orm import Session
 from app.routes.auth import get_current_admin
 import uuid
-from datetime import date
+from datetime import datetime, date
 from dateutil.parser import parse as parse_date
 
 router = APIRouter()
@@ -44,6 +44,12 @@ def db_to_api_exp(db_exp: ExperienceModel) -> Experience:
         colorScheme="",  # Set as needed
     )
 
+def to_date(val):
+    parsed = parse_date(val, default=date.today().replace(day=1))
+    if isinstance(parsed, datetime):
+        return parsed.date()
+    return parsed
+
 @router.get("/", response_model=List[Experience], summary="List Experiences")
 def list_experiences(db: Session = Depends(get_db)):
     db_experiences = db.query(ExperienceModel).all()
@@ -63,12 +69,12 @@ def create_experience(exp: ExperienceCreate, db: Session = Depends(get_db), admi
         return {"message": str(e.detail), "success": False}
     try:
         start_str, end_str = [s.strip() for s in exp.dateRange.split('-')]
-        start_date = parse_date(start_str, default=date.today().replace(day=1)).date()
+        start_date = to_date(start_str)
         if end_str.lower() in ["present", "now"]:
             end_date = None
             is_current = True
         else:
-            end_date = parse_date(end_str, default=date.today().replace(day=1)).date()
+            end_date = to_date(end_str)
             is_current = False
     except Exception as e:
         print(f"DATE PARSE ERROR: {e}")
@@ -104,15 +110,16 @@ def update_experience(exp_id: str, exp: ExperienceUpdate, db: Session = Depends(
         return {"message": str(e.detail), "success": False}
     try:
         start_str, end_str = [s.strip() for s in exp.dateRange.split('-')]
-        start_date = parse_date(start_str, default=date.today().replace(day=1)).date()
+        start_date = to_date(start_str)
         if end_str.lower() in ["present", "now"]:
             end_date = None
             is_current = True
         else:
-            end_date = parse_date(end_str, default=date.today().replace(day=1)).date()
+            end_date = to_date(end_str)
             is_current = False
-    except Exception:
-        return {"message": "Invalid dateRange format. Please use a recognizable date format like 'Feb 2024 - Present' or '2024-02 - 2025-01'.", "success": False}
+    except Exception as e:
+        print(f"DATE PARSE ERROR: {e}")
+        return {"message": f"Could not understand the date range you entered: '{exp.dateRange}'. Please try again.", "success": False}
     db_exp.title = exp.title
     db_exp.company = exp.company
     db_exp.company_website = exp.url
