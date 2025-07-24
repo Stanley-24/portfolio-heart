@@ -3,6 +3,11 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from typing import Optional
+import os
+import json
+from fastapi.responses import RedirectResponse
+from fastapi import Request
+from google_auth_oauthlib.flow import Flow
 
 SECRET_KEY = "supersecretkey"  # Change in production
 ALGORITHM = "HS256"
@@ -72,4 +77,52 @@ def reset_admin():
     global ADMIN_EMAIL
     ADMIN_EMAIL = "admin@example.com"
     global_admin_password["value"] = "admin123"
-    return {"message": "Admin credentials reset.", "success": True} 
+    return {"message": "Admin credentials reset.", "success": True}
+
+@router.get("/google-oauth-login", summary="Start Google OAuth2 login for calendar access")
+def google_oauth_login():
+    client_id = os.environ["GOOGLE_OAUTH_CLIENT_ID"]
+    client_secret = os.environ["GOOGLE_OAUTH_CLIENT_SECRET"]
+    redirect_uri = os.environ.get("GOOGLE_OAUTH_REDIRECT_URI", "http://localhost:8000/api/auth/google-oauth-callback")
+    client_config = {
+        "web": {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uris": [redirect_uri],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token"
+        }
+    }
+    flow = Flow.from_client_config(
+        client_config,
+        scopes=["https://www.googleapis.com/auth/calendar"],
+        redirect_uri=redirect_uri
+    )
+    auth_url, _ = flow.authorization_url(prompt='consent', access_type='offline', include_granted_scopes='true')
+    return RedirectResponse(auth_url)
+
+@router.get("/google-oauth-callback", summary="Handle Google OAuth2 callback")
+def google_oauth_callback(request: Request):
+    client_id = os.environ["GOOGLE_OAUTH_CLIENT_ID"]
+    client_secret = os.environ["GOOGLE_OAUTH_CLIENT_SECRET"]
+    redirect_uri = os.environ.get("GOOGLE_OAUTH_REDIRECT_URI", "http://localhost:8000/api/auth/google-oauth-callback")
+    client_config = {
+        "web": {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uris": [redirect_uri],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token"
+        }
+    }
+    flow = Flow.from_client_config(
+        client_config,
+        scopes=["https://www.googleapis.com/auth/calendar"],
+        redirect_uri=redirect_uri
+    )
+    flow.fetch_token(authorization_response=str(request.url))
+    credentials = flow.credentials
+    # Save credentials to a file (token.json)
+    with open("backend/app/credentials/token.json", "w") as token:
+        token.write(credentials.to_json())
+    return {"message": "Google Calendar authentication successful! You can now create events with invites."} 

@@ -1,21 +1,22 @@
 import os
 import json
-from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 
-# Load service account info from environment variable
-SERVICE_ACCOUNT_INFO = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+TOKEN_PATH = "backend/app/credentials/token.json"
 CALENDAR_ID = os.getenv("GOOGLE_CALENDAR_ID")  # Set this to your calendar's ID (usually your email)
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
+def get_calendar_service():
+    creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+    service = build("calendar", "v3", credentials=creds)
+    return service
+
 # Returns the event and the Google Meet link
 def create_google_meet_event(summary, description, start_time, end_time, attendee_email=None):
-    credentials = service_account.Credentials.from_service_account_info(
-        SERVICE_ACCOUNT_INFO, scopes=SCOPES
-    )
-    service = build("calendar", "v3", credentials=credentials)
+    service = get_calendar_service()
 
     event = {
         "summary": summary,
