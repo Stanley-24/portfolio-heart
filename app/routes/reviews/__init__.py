@@ -10,7 +10,7 @@ router = APIRouter()
 
 # Helper: validate review fields
 def validate_review(data: ReviewCreate):
-    if not data.name or not data.review or not data.rating:
+    if not data.client_name or not data.review_text or not data.rating:
         raise HTTPException(status_code=400, detail="Name, review, and rating are required.")
     if not (1 <= data.rating <= 5):
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
