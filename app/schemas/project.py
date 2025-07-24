@@ -17,11 +17,14 @@ class ProjectBase(BaseModel):
     def parse_dates(cls, v):
         if v is None:
             return v
-        for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
-            try:
-                return datetime.strptime(v, fmt).strftime("%Y-%m-%d")
-            except Exception:
-                continue
+        if isinstance(v, datetime):
+            return v.strftime("%Y-%m-%d")
+        if isinstance(v, str):
+            for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
+                try:
+                    return datetime.strptime(v, fmt).strftime("%Y-%m-%d")
+                except Exception:
+                    continue
         raise ValueError("Date must be in YYYY-MM-DD format")
 
     class Config:
