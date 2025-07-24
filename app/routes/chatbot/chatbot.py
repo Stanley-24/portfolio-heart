@@ -77,6 +77,10 @@ def chatbot_endpoint(request: ChatbotRequest, db: Session = Depends(get_db)):
 
     try:
         answer = get_openai_response(message, context, SYSTEM_PROMPT)
+        # Log conversation to txt file
+        log_path = os.path.join(os.path.dirname(__file__), "chatbot_conversations.txt")
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"USER: {message}\nBOT: {answer}\n---\n")
         return {"answer": answer}
     except Exception:
         return {"answer": "Sorry, I'm unable to answer complex questions right now, but you can ask about Stanley’s projects, skills, or contact options!"} 
