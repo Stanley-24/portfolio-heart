@@ -3,8 +3,8 @@ from typing import Optional
 from datetime import datetime
 
 class LeadCreate(BaseModel):
-    name: Optional[str] = Field(None, max_length=128)
-    email: Optional[EmailStr] = None
+    name: str = Field(..., max_length=128)
+    email: EmailStr
     interest: str = Field(..., max_length=512)
 
 class LeadOut(BaseModel):
