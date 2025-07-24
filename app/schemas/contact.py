@@ -4,7 +4,6 @@ from typing import Optional
 class BookCallBase(BaseModel):
     name: str
     email: EmailStr
-    phone: Optional[str] = None
     preferred_datetime: str
     message: Optional[str] = None
     video_call_provider: str
@@ -26,7 +25,6 @@ class MessageBase(BaseModel):
     email: EmailStr
     message: str
     subject: Optional[str] = None
-    phone: Optional[str] = None
 
 class MessageCreate(MessageBase):
     pass

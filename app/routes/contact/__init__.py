@@ -2,9 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from app.schemas.contact import BookCall, BookCallCreate, Message, MessageCreate
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.routes.auth import get_current_admin
 from app.services.email_service import send_contact_message_with_zoho, send_booking_confirmation_with_zoho
+from app.services.google_meet_service import create_google_meet_event
 
 router = APIRouter()
 
@@ -14,7 +15,7 @@ fake_message_db = []
 
 # Helper: validate book call fields
 def validate_bookcall(data: BookCallCreate):
-    if not data.name or not data.email or not data.phone or not data.preferred_datetime or not data.video_call_provider:
+    if not data.name or not data.email or not data.preferred_datetime or not data.video_call_provider:
         raise HTTPException(status_code=400, detail="All fields except message and link are required.")
 
 # Helper: validate message fields
@@ -35,28 +36,41 @@ def book_call(data: BookCallCreate):
         missing.append("video_call_provider")
     if missing:
         return {"message": f"Missing required fields: {', '.join(missing)}", "success": False}
-    allowed_providers = {"google_meet", "zoom", "teams"}
+    allowed_providers = {"google_meet"}
     if data.video_call_provider not in allowed_providers:
         return {"message": f"Invalid video_call_provider. Allowed: {', '.join(allowed_providers)}", "success": False}
     new_id = str(uuid.uuid4())
     now = datetime.utcnow().isoformat()
-    payload = {**data.model_dump(), "video_call_link": None}
+    # Create Google Meet event
+    try:
+        # Assume preferred_datetime is ISO string, use 30 min duration
+        start_time = data.preferred_datetime
+        end_time = (datetime.fromisoformat(start_time) + timedelta(minutes=30)).isoformat()
+        event, meet_link = create_google_meet_event(
+            summary=f"Call with {data.name}",
+            description=data.message or "",
+            start_time=start_time,
+            end_time=end_time,
+            attendee_email=data.email
+        )
+    except Exception as e:
+        return {"message": f"Failed to create Google Meet event: {str(e)}", "success": False}
+    payload = {**data.model_dump(), "video_call_link": meet_link}
     new_call = BookCall(
         id=new_id,
         contacted_at=now,
-        calendar_event_id=None,
+        calendar_event_id=event.get("id"),
         **payload
     )
     fake_bookcall_db.append(new_call)
     # Send booking confirmation email
     try:
-        call_link = payload.get("video_call_link") or "(link to be generated)"
         send_booking_confirmation_with_zoho(
             client_name=data.name,
             client_email=data.email,
             call_datetime=data.preferred_datetime,
             provider=data.video_call_provider,
-            call_link=call_link
+            call_link=meet_link
         )
     except Exception as e:
         return {"message": f"Call booked but failed to send email: {str(e)}", "call": new_call, "success": False}
@@ -83,7 +97,7 @@ def send_message(data: MessageCreate):
     fake_message_db.append(new_msg)
     # Send contact message email
     try:
-        send_contact_message_with_zoho(data.name, data.email, data.message)
+        send_contact_message_with_zoho(data.name, data.email, data.message, getattr(data, 'subject', None))
     except Exception as e:
         return {"message": f"Message saved but failed to send email: {str(e)}", "message_data": new_msg, "success": False}
     return {"message": "Message sent successfully.", "message_data": new_msg, "success": True}

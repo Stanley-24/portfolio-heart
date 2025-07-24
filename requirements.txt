@@ -25,3 +25,5 @@ celery==5.3.4
 psycopg2-binary==2.9.10
 requests==2.31.0
 python-dateutil
+google-api-python-client>=2.0.0
+google-auth>=2.0.0
