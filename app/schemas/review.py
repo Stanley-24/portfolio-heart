@@ -14,7 +14,7 @@ class ReviewUpdate(ReviewBase):
     pass
 
 class Review(ReviewBase):
-    id: str
+    id: int
 
     class Config:
         from_attributes = True 
