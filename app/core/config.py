@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     
     OPENAI_API_KEY: str = ""
     
+    # Google Calendar & OAuth
+    GOOGLE_CALENDAR_ID: Optional[str] = None
+    GOOGLE_OAUTH_CLIENT_ID: Optional[str] = None
+    GOOGLE_OAUTH_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_OAUTH_REDIRECT_URI: Optional[str] = None
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -6,6 +6,9 @@ from datetime import datetime, timedelta
 from app.routes.auth import get_current_admin
 from app.services.email_service import send_contact_message_with_zoho, send_booking_confirmation_with_zoho
 from app.services.google_meet_service import create_google_meet_event
+from app.core.database import get_db
+from app.models.contact import Lead
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -24,7 +27,7 @@ def validate_message(data: MessageCreate):
         raise HTTPException(status_code=400, detail="Name, email, and message are required.")
 
 @router.post("/book", summary="Book a Call")
-def book_call(data: BookCallCreate):
+def book_call(data: BookCallCreate, db: Session = Depends(get_db)):
     missing = []
     if not data.name:
         missing.append("name")
@@ -74,14 +77,19 @@ def book_call(data: BookCallCreate):
         )
     except Exception as e:
         return {"message": f"Call booked but failed to send email: {str(e)}", "call": new_call, "success": False}
-    return {"message": "Call booked successfully.", "call": new_call, "success": True}
+    # Save lead to database
+    db_lead = Lead(name=data.name, email=data.email, interest=data.video_call_provider, message=data.message)
+    db.add(db_lead)
+    db.commit()
+    db.refresh(db_lead)
+    return {"message": "Call booked successfully.", "call": new_call, "lead": db_lead, "success": True}
 
 @router.get("/bookings", response_model=List[BookCall], summary="List Booked Calls")
 def list_booked_calls():
     return fake_bookcall_db
 
 @router.post("/message", summary="Send Message")
-def send_message(data: MessageCreate):
+def send_message(data: MessageCreate, db: Session = Depends(get_db)):
     missing = []
     if not data.name:
         missing.append("name")
@@ -100,7 +108,12 @@ def send_message(data: MessageCreate):
         send_contact_message_with_zoho(data.name, data.email, data.message, getattr(data, 'subject', None))
     except Exception as e:
         return {"message": f"Message saved but failed to send email: {str(e)}", "message_data": new_msg, "success": False}
-    return {"message": "Message sent successfully.", "message_data": new_msg, "success": True}
+    # Save lead to database
+    db_lead = Lead(name=data.name, email=data.email, interest=None, message=data.message)
+    db.add(db_lead)
+    db.commit()
+    db.refresh(db_lead)
+    return {"message": "Message sent successfully.", "message_data": new_msg, "lead": db_lead, "success": True}
 
 @router.get("/messages", response_model=List[Message], summary="List Messages")
 def list_messages():
