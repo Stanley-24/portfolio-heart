@@ -123,6 +123,8 @@ def google_oauth_callback(request: Request):
     flow.fetch_token(authorization_response=str(request.url))
     credentials = flow.credentials
     # Save credentials to a file (token.json)
-    with open("backend/app/credentials/token.json", "w") as token:
+    token_dir = "app/credentials"
+    os.makedirs(token_dir, exist_ok=True)
+    with open(os.path.join(token_dir, "token.json"), "w") as token:
         token.write(credentials.to_json())
     return {"message": "Google Calendar authentication successful! You can now create events with invites."} 
