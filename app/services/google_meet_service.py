@@ -4,7 +4,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 
-TOKEN_PATH = "backend/app/credentials/token.json"
+TOKEN_PATH = "app/credentials/token.json"
 CALENDAR_ID = os.getenv("GOOGLE_CALENDAR_ID")  # Set this to your calendar's ID (usually your email)
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
