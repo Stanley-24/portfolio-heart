@@ -69,7 +69,7 @@ Stanley Owarieta
         smtp.send_message(msg) 
 
 
-def send_contact_message_with_zoho(name, email, message):
+def send_contact_message_with_zoho(name, email, message, subject=None):
     smtp_server = os.getenv("ZOHO_SMTP_SERVER")
     smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
     smtp_user = os.getenv("ZOHO_SMTP_USER")
@@ -80,17 +80,33 @@ def send_contact_message_with_zoho(name, email, message):
     if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
         raise Exception("SMTP credentials are not fully set in environment variables.")
 
+    email_subject = f"Contact: {subject}" if subject else f"New Contact Message from {name}"
     msg = EmailMessage()
-    msg['Subject'] = f"New Contact Message from {name}"
+    msg['Subject'] = email_subject
     msg['From'] = from_email
     msg['To'] = owner_email
-    msg.set_content(f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}")
+    # Plain text
+    msg.set_content(f"""
+Subject: {subject or '(No Subject)'}
+
+Name: {name}
+Email: {email}
+
+Message:
+{message}
+
+Best regards,
+Your Portfolio Website
+""")
+    # HTML version
     msg.add_alternative(f"""
     <html><body>
-      <h2>New Contact Message</h2>
+      <h2>Contact Message</h2>
+      <p><b>Subject:</b> {subject or '(No Subject)'}</p>
       <p><b>Name:</b> {name}<br/>
          <b>Email:</b> {email}</p>
       <p><b>Message:</b><br/>{message}</p>
+      <p style='margin-top:2em;'>Best regards,<br/>Your Portfolio Website</p>
     </body></html>
     """, subtype='html')
     with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:

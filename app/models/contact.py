@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
 from sqlalchemy.sql import func
 from ..core.database import Base
 
@@ -31,4 +31,15 @@ class Lead(Base):
     interest = Column(String(255), nullable=True)
     message = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now()) 
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+class ChatbotReply(Base):
+    __tablename__ = "chatbot_replies"
+    id = Column(Integer, primary_key=True, index=True)
+    lead_id = Column(Integer, ForeignKey('leads.id'), nullable=True)
+    sender = Column(String(50), nullable=False)  # 'bot' or 'recruiter'
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<ChatbotReply(id={self.id}, sender='{self.sender}')>" 

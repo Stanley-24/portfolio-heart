@@ -3,7 +3,7 @@ from .experience import Experience
 from .project import Project
 from .review import Review
 from .newsletter import NewsletterSubscriber
-from .contact import ContactMessage
+from .contact import ContactMessage, ChatbotReply
 
 __all__ = [
     "Resume",
@@ -11,5 +11,6 @@ __all__ = [
     "Project",
     "Review",
     "NewsletterSubscriber",
-    "ContactMessage"
+    "ContactMessage",
+    "ChatbotReply"
 ] 
