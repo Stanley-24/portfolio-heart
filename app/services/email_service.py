@@ -67,3 +67,74 @@ Stanley Owarieta
     with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
         smtp.login(smtp_user, smtp_pass)
         smtp.send_message(msg) 
+
+
+def send_contact_message_with_zoho(name, email, message):
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+    owner_email = from_email  # Send to yourself
+
+    if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
+        raise Exception("SMTP credentials are not fully set in environment variables.")
+
+    msg = EmailMessage()
+    msg['Subject'] = f"New Contact Message from {name}"
+    msg['From'] = from_email
+    msg['To'] = owner_email
+    msg.set_content(f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}")
+    msg.add_alternative(f"""
+    <html><body>
+      <h2>New Contact Message</h2>
+      <p><b>Name:</b> {name}<br/>
+         <b>Email:</b> {email}</p>
+      <p><b>Message:</b><br/>{message}</p>
+    </body></html>
+    """, subtype='html')
+    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+        smtp.login(smtp_user, smtp_pass)
+        smtp.send_message(msg)
+
+
+def send_booking_confirmation_with_zoho(client_name, client_email, call_datetime, provider, call_link, owner_email=None):
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+    if not owner_email:
+        owner_email = from_email
+
+    if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
+        raise Exception("SMTP credentials are not fully set in environment variables.")
+
+    subject = f"Call Booking Confirmation for {client_name}"
+    html_content = f"""
+    <html><body>
+      <h2>Call Booking Confirmation</h2>
+      <p>Hi {client_name},<br/>
+         Your call is booked for <b>{call_datetime}</b> via <b>{provider}</b>.<br/>
+         Call Link: <a href='{call_link}'>{call_link}</a></p>
+      <p>You will receive a reminder before the call.</p>
+    </body></html>
+    """
+    # Send to client
+    msg_client = EmailMessage()
+    msg_client['Subject'] = subject
+    msg_client['From'] = from_email
+    msg_client['To'] = client_email
+    msg_client.set_content(f"Your call is booked for {call_datetime} via {provider}. Call Link: {call_link}")
+    msg_client.add_alternative(html_content, subtype='html')
+    # Send to owner
+    msg_owner = EmailMessage()
+    msg_owner['Subject'] = subject
+    msg_owner['From'] = from_email
+    msg_owner['To'] = owner_email
+    msg_owner.set_content(f"Call with {client_name} booked for {call_datetime} via {provider}. Call Link: {call_link}")
+    msg_owner.add_alternative(html_content, subtype='html')
+    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+        smtp.login(smtp_user, smtp_pass)
+        smtp.send_message(msg_client)
+        smtp.send_message(msg_owner) 

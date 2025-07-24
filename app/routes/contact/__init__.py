@@ -4,6 +4,7 @@ from app.schemas.contact import BookCall, BookCallCreate, Message, MessageCreate
 import uuid
 from datetime import datetime
 from app.routes.auth import get_current_admin
+from app.services.email_service import send_contact_message_with_zoho, send_booking_confirmation_with_zoho
 
 router = APIRouter()
 
@@ -47,6 +48,18 @@ def book_call(data: BookCallCreate):
         **payload
     )
     fake_bookcall_db.append(new_call)
+    # Send booking confirmation email
+    try:
+        call_link = payload.get("video_call_link") or "(link to be generated)"
+        send_booking_confirmation_with_zoho(
+            client_name=data.name,
+            client_email=data.email,
+            call_datetime=data.preferred_datetime,
+            provider=data.video_call_provider,
+            call_link=call_link
+        )
+    except Exception as e:
+        return {"message": f"Call booked but failed to send email: {str(e)}", "call": new_call, "success": False}
     return {"message": "Call booked successfully.", "call": new_call, "success": True}
 
 @router.get("/bookings", response_model=List[BookCall], summary="List Booked Calls")
@@ -68,6 +81,11 @@ def send_message(data: MessageCreate):
     now = datetime.utcnow().isoformat()
     new_msg = Message(id=new_id, sent_at=now, **data.model_dump())
     fake_message_db.append(new_msg)
+    # Send contact message email
+    try:
+        send_contact_message_with_zoho(data.name, data.email, data.message)
+    except Exception as e:
+        return {"message": f"Message saved but failed to send email: {str(e)}", "message_data": new_msg, "success": False}
     return {"message": "Message sent successfully.", "message_data": new_msg, "success": True}
 
 @router.get("/messages", response_model=List[Message], summary="List Messages")
