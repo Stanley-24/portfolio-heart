@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, JSON, LargeBinary, ForeignKey
 from sqlalchemy.sql import func
 from ..core.database import Base
 
@@ -24,3 +24,11 @@ class Project(Base):
     
     def __repr__(self):
         return f"<Project(id={self.id}, title='{self.title}')>" 
+
+class ProjectThumbnail(Base):
+    __tablename__ = "project_thumbnails"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, unique=True)
+    filename = Column(String(255), nullable=False)
+    image_data = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now()) 
