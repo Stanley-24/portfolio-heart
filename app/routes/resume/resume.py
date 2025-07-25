@@ -1,8 +1,7 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from app.schemas.resume import ResumeStats as ResumeStatsSchema
 from datetime import datetime
-import os
 from app.routes.auth import get_current_admin
 from typing import Any
 from app.models.resume import ResumeStats, Resume
@@ -11,21 +10,12 @@ from sqlalchemy.orm import Session
 
 router = APIRouter()
 
-RESUME_UPLOAD_PATH = "uploads/resume.pdf"
-
 @router.post("/upload", summary="Upload Resume Pdf")
 def upload_resume_pdf(file: UploadFile = File(...), db: Session = Depends(get_db), admin: Any = Depends(get_current_admin)):
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
     pdf_bytes = file.file.read()
-    # Save to file system (optional)
-    os.makedirs(os.path.dirname(RESUME_UPLOAD_PATH), exist_ok=True)
-    try:
-        with open(RESUME_UPLOAD_PATH, "wb") as f:
-            f.write(pdf_bytes)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
-    # Save to database
+    # Save to database only
     resume = db.query(Resume).first()
     if not resume:
         resume = Resume(pdf_data=pdf_bytes, name="Stanley Owarieta", title="Software Engineer", email="", phone="", location="", summary="")
@@ -50,14 +40,13 @@ def get_resume_pdf(db: Session = Depends(get_db)):
     return Response(resume.pdf_data, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=resume.pdf"})
 
 @router.delete("/", status_code=200, summary="Delete Resume")
-def delete_resume(admin=Depends(get_current_admin)):
-    if not os.path.exists(RESUME_UPLOAD_PATH):
-        raise HTTPException(status_code=404, detail="Resume PDF not found.")
-    try:
-        os.remove(RESUME_UPLOAD_PATH)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
-    return {"message": "Resume PDF deleted successfully.", "success": True}
+def delete_resume(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    resume = db.query(Resume).first()
+    if not resume or not resume.pdf_data:
+        raise HTTPException(status_code=404, detail="Resume PDF not found in database.")
+    resume.pdf_data = None
+    db.commit()
+    return {"message": "Resume PDF deleted from database.", "success": True}
 
 @router.post("/save", summary="Save Resume Analytics")
 def save_resume_analytics(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
