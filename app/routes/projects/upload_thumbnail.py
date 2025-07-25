@@ -4,8 +4,12 @@ from app.routes.auth import get_current_admin
 from app.models.project import Project, ProjectThumbnail
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+import unicodedata
 
 router = APIRouter()
+
+def sanitize_filename(filename):
+    return unicodedata.normalize('NFKD', filename).encode('ascii', 'ignore').decode('ascii')
 
 @router.post("/upload-thumbnail", summary="Upload project thumbnail/cover (admin only)")
 def upload_project_thumbnail(
@@ -45,4 +49,5 @@ def get_project_thumbnail(project_id: int, db: Session = Depends(get_db)):
     thumbnail = db.query(ProjectThumbnail).filter(ProjectThumbnail.project_id == project_id).first()
     if not thumbnail or not thumbnail.image_data:
         raise HTTPException(status_code=404, detail="Thumbnail not found for this project.")
-    return Response(thumbnail.image_data, media_type="image/png", headers={"Content-Disposition": f"inline; filename={thumbnail.filename}"}) 
+    safe_filename = sanitize_filename(thumbnail.filename)
+    return Response(thumbnail.image_data, media_type="image/png", headers={"Content-Disposition": f"inline; filename={safe_filename}"}) 
