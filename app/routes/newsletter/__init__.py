@@ -1,78 +1,97 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from app.schemas.newsletter import Newsletter, NewsletterCreate, NewsletterUpdate
-import uuid
+from app.models.newsletter import NewsletterSubscriber
+from app.core.database import get_db
+from sqlalchemy.orm import Session
 from datetime import datetime
 from app.routes.auth import get_current_admin
+import os
+import smtplib
+from email.message import EmailMessage
 
 router = APIRouter()
-
-# Fake in-memory DB
-fake_newsletter_db = []
 
 # Helper: validate newsletter fields
 def validate_newsletter(data: NewsletterCreate):
     if not data.email:
         raise HTTPException(status_code=400, detail="Email is required.")
 
-@router.get("/", response_model=List[Newsletter], summary="List Subscribers")
-def list_subscribers(admin=Depends(get_current_admin)):
-    """List all newsletter subscribers."""
-    return fake_newsletter_db
-
 @router.post("/subscribe", summary="Subscribe to Newsletter")
-def subscribe_newsletter(data: NewsletterCreate):
-    try:
-        validate_newsletter(data)
-    except HTTPException as e:
-        return {"message": str(e.detail), "success": False}
+def subscribe_newsletter(data: NewsletterCreate, db: Session = Depends(get_db)):
+    validate_newsletter(data)
     # Prevent duplicate emails
-    for sub in fake_newsletter_db:
-        if sub.email == data.email:
-            return {"message": "Email already subscribed.", "success": False}
-    new_id = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
-    payload = {**data.model_dump(), "subscribed_at": now}
-    new_sub = Newsletter(id=new_id, **payload)
-    fake_newsletter_db.append(new_sub)
-    return {"message": "Subscribed successfully.", "success": True, "subscriber": new_sub}
+    existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == data.email).first()
+    if existing:
+        return {"message": "Email already subscribed.", "success": False}
+    new_sub = NewsletterSubscriber(email=data.email, is_active=True, subscribed_at=datetime.utcnow())
+    db.add(new_sub)
+    db.commit()
+    db.refresh(new_sub)
+    # Send welcome email to client
+    send_newsletter_welcome_email(data.email)
+    # Send lead notification to owner
+    send_newsletter_lead_notification(data.email)
+    return {"message": "Subscribed successfully.", "success": True, "subscriber": {"email": new_sub.email}}
 
-@router.put("/{subscriber_id}", summary="Update Subscriber")
-def update_subscriber(subscriber_id: str, data: NewsletterUpdate, admin=Depends(get_current_admin)):
-    try:
-        validate_newsletter(data)
-    except HTTPException as e:
-        return {"message": str(e.detail), "success": False}
-    for i, sub in enumerate(fake_newsletter_db):
-        if sub.id == subscriber_id:
-            payload = {**data.model_dump(), "subscribed_at": sub.subscribed_at}
-            updated_sub = Newsletter(id=subscriber_id, **payload)
-            fake_newsletter_db[i] = updated_sub
-            return {"message": "Subscriber updated successfully.", "success": True, "subscriber": updated_sub}
-    return {"message": "Subscriber not found", "success": False}
+# Email sending helpers
+def send_newsletter_welcome_email(email):
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+    subject = "Welcome to Stanley’s Newsletter!"
+    html_content = f"""
+    <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>
+      <div style='max-width:520px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px #e3e8f0;padding:32px;'>
+        <h2 style='color:#2563eb;margin-bottom:8px;'>Welcome to Stanley’s Newsletter!</h2>
+        <p style='font-size:1.1em;color:#222;'>Hi there,<br/>
+          Thank you for subscribing to Stanley’s newsletter! You’ll now receive updates, tips, and news straight to your inbox.</p>
+        <div style='background:#f1f5f9;border-radius:6px;padding:16px;margin:24px 0;'>
+          <b style='color:#2563eb;'>If you have any questions or want to unsubscribe, just reply to this email.</b>
+        </div>
+        <p style='margin-top:2em;font-size:1em;color:#444;'>
+          Best,<br/>
+          <span style='color:#2563eb;font-weight:bold;'>Stanley Owarieta</span>
+        </p>
+      </div>
+    </body></html>
+    """
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = from_email
+    msg['To'] = email
+    msg.set_content("Thank you for subscribing to Stanley’s newsletter!")
+    msg.add_alternative(html_content, subtype='html')
+    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+        smtp.login(smtp_user, smtp_pass)
+        smtp.send_message(msg)
 
-@router.delete("/{subscriber_id}", status_code=200, summary="Delete Subscriber")
-def delete_subscriber(subscriber_id: str, admin=Depends(get_current_admin)):
-    for i, sub in enumerate(fake_newsletter_db):
-        if sub.id == subscriber_id:
-            del fake_newsletter_db[i]
-            return {"message": "Subscriber deleted successfully.", "success": True}
-    return {"message": "Subscriber not found", "success": False}
-
-@router.post("/unsubscribe/{subscriber_id}", summary="Unsubscribe from Newsletter")
-def unsubscribe_newsletter(subscriber_id: str):
-    for i, sub in enumerate(fake_newsletter_db):
-        if sub.id == subscriber_id:
-            if not sub.is_active:
-                return {"message": "Subscriber is already unsubscribed.", "success": False}
-            unsub_time = datetime.utcnow().isoformat()
-            updated_sub = Newsletter(
-                id=sub.id,
-                email=sub.email,
-                is_active=False,
-                subscribed_at=sub.subscribed_at,
-                unsubscribed_at=unsub_time
-            )
-            fake_newsletter_db[i] = updated_sub
-            return {"message": "Unsubscribed successfully.", "success": True, "subscriber": updated_sub}
-    return {"message": "Subscriber not found", "success": False} 
+def send_newsletter_lead_notification(email):
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+    owner_email = from_email
+    subject = "New Newsletter Subscriber"
+    html_content = f"""
+    <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>
+      <div style='max-width:520px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px #e3e8f0;padding:32px;'>
+        <h2 style='color:#2563eb;margin-bottom:8px;'>New Newsletter Subscriber</h2>
+        <ul style='color:#222;font-size:1.05em;'>
+          <li><b>Email:</b> {email}</li>
+        </ul>
+      </div>
+    </body></html>
+    """
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = from_email
+    msg['To'] = owner_email
+    msg.set_content(f"A new subscriber has joined your newsletter: {email}")
+    msg.add_alternative(html_content, subtype='html')
+    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+        smtp.login(smtp_user, smtp_pass)
+        smtp.send_message(msg) 
