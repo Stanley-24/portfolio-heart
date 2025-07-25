@@ -44,6 +44,10 @@ def camel_to_snake(data):
 @router.get("/", response_model=List[ProjectSchema], summary="List Projects")
 def list_projects(db: Session = Depends(get_db)):
     projects = db.query(Project).all()
+    base_url = "https://portfolio-heart.onrender.com"
+    for project in projects:
+        if project.thumbnail and not project.thumbnail.startswith("http"):
+            project.thumbnail = f"{base_url}{project.thumbnail}"
     return projects
 
 @router.post("/", summary="Add Project")
