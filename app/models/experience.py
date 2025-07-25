@@ -17,6 +17,8 @@ class Experience(Base):
     achievements = Column(Text, nullable=True)
     company_logo = Column(String(500), nullable=True)
     company_website = Column(String(500), nullable=True)
+    icon = Column(String(50), nullable=True)  # Store the icon key
+    color_scheme = Column(String(50), nullable=True)  # Store the color scheme
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

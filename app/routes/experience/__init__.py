@@ -41,7 +41,7 @@ def db_to_api_exp(db_exp: ExperienceModel) -> Experience:
         company=db_exp.company,
         url=db_exp.company_website or "",
         icon=db_exp.icon if hasattr(db_exp, 'icon') and db_exp.icon else "laptop",
-        colorScheme="",  # Set as needed
+        colorScheme=db_exp.color_scheme or "",
     )
 
 def to_date(val):
@@ -91,6 +91,8 @@ def create_experience(exp: ExperienceCreate, db: Session = Depends(get_db), admi
         achievements="",
         company_logo=None,
         company_website=exp.url,
+        icon=exp.icon,
+        color_scheme=exp.colorScheme,
     )
     db.add(db_exp)
     db.commit()
@@ -126,7 +128,8 @@ def update_experience(exp_id: str, exp: ExperienceUpdate, db: Session = Depends(
     db_exp.start_date = start_date
     db_exp.end_date = end_date
     db_exp.is_current = is_current
-    # db_exp.icon = exp.icon  # If you add icon to the DB model
+    db_exp.icon = exp.icon
+    db_exp.color_scheme = exp.colorScheme
     db.commit()
     db.refresh(db_exp)
     api_exp = db_to_api_exp(db_exp)
