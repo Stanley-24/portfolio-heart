@@ -103,10 +103,10 @@ def send_message(data: MessageCreate, db: Session = Depends(get_db)):
     # Save lead to database only if not duplicate
     existing_lead = db.query(Lead).filter(Lead.email == data.email).first()
     if not existing_lead:
-    db_lead = Lead(name=data.name, email=data.email, interest=None, message=data.message)
-    db.add(db_lead)
-    db.commit()
-    db.refresh(db_lead)
+        db_lead = Lead(name=data.name, email=data.email, interest=None, message=data.message)
+        db.add(db_lead)
+        db.commit()
+        db.refresh(db_lead)
     return {"message": "Message sent successfully.", "success": True}
 
 @router.get("/messages", response_model=List[Message], summary="List Messages")
