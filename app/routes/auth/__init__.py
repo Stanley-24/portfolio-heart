@@ -77,7 +77,7 @@ def reset_admin():
     global ADMIN_EMAIL
     ADMIN_EMAIL = "admin@example.com"
     global_admin_password["value"] = "admin123"
-    return {"message": "Admin credentials reset.", "success": True}
+    return {"message": "Admin credentials reset.", "success": True} 
 
 @router.get("/google-oauth-login", summary="Start Google OAuth2 login for calendar access")
 def google_oauth_login():

@@ -10,6 +10,10 @@ router = APIRouter()
 
 @router.post("/leads", response_model=LeadOut, status_code=status.HTTP_201_CREATED)
 def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
+    # Prevent duplicate leads by email
+    existing_lead = db.query(Lead).filter(Lead.email == lead.email).first()
+    if existing_lead:
+        raise HTTPException(status_code=409, detail="Lead with this email already exists.")
     db_lead = Lead(name=lead.name, email=lead.email, interest=lead.interest)
     db.add(db_lead)
     db.commit()

@@ -46,7 +46,6 @@ def book_call(data: BookCallCreate, db: Session = Depends(get_db)):
     now = datetime.utcnow().isoformat()
     # Create Google Meet event
     try:
-        # Assume preferred_datetime is ISO string, use 30 min duration
         start_time = data.preferred_datetime
         end_time = (datetime.fromisoformat(start_time) + timedelta(minutes=30)).isoformat()
         event, meet_link = create_google_meet_event(
@@ -66,23 +65,25 @@ def book_call(data: BookCallCreate, db: Session = Depends(get_db)):
         **payload
     )
     fake_bookcall_db.append(new_call)
-    # Send booking confirmation email
+    # Send booking confirmation and lead notification emails
     try:
         send_booking_confirmation_with_zoho(
             client_name=data.name,
             client_email=data.email,
             call_datetime=data.preferred_datetime,
             provider=data.video_call_provider,
-            call_link=meet_link
+            call_link=meet_link,
+            owner_email=None,
+            client_message=data.message
         )
     except Exception as e:
-        return {"message": f"Call booked but failed to send email: {str(e)}", "call": new_call, "success": False}
+        return {"message": f"Call booked but failed to send email: {str(e)}", "call": new_call, "success": False, "video_call_link": meet_link}
     # Save lead to database
     db_lead = Lead(name=data.name, email=data.email, interest=data.video_call_provider, message=data.message)
     db.add(db_lead)
     db.commit()
     db.refresh(db_lead)
-    return {"message": "Call booked successfully.", "call": new_call, "lead": db_lead, "success": True}
+    return {"message": "Call booked successfully.", "call": new_call, "lead": db_lead, "success": True, "video_call_link": meet_link}
 
 @router.get("/bookings", response_model=List[BookCall], summary="List Booked Calls")
 def list_booked_calls():
@@ -99,21 +100,19 @@ def send_message(data: MessageCreate, db: Session = Depends(get_db)):
         missing.append("message")
     if missing:
         return {"message": f"Missing required fields: {', '.join(missing)}", "success": False}
-    new_id = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
-    new_msg = Message(id=new_id, sent_at=now, **data.model_dump())
-    fake_message_db.append(new_msg)
     # Send contact message email
     try:
         send_contact_message_with_zoho(data.name, data.email, data.message, getattr(data, 'subject', None))
     except Exception as e:
-        return {"message": f"Message saved but failed to send email: {str(e)}", "message_data": new_msg, "success": False}
-    # Save lead to database
-    db_lead = Lead(name=data.name, email=data.email, interest=None, message=data.message)
-    db.add(db_lead)
-    db.commit()
-    db.refresh(db_lead)
-    return {"message": "Message sent successfully.", "message_data": new_msg, "lead": db_lead, "success": True}
+        return {"message": f"Message saved but failed to send email: {str(e)}", "success": False}
+    # Save lead to database only if not duplicate
+    existing_lead = db.query(Lead).filter(Lead.email == data.email).first()
+    if not existing_lead:
+        db_lead = Lead(name=data.name, email=data.email, interest=None, message=data.message)
+        db.add(db_lead)
+        db.commit()
+        db.refresh(db_lead)
+    return {"message": "Message sent successfully.", "success": True}
 
 @router.get("/messages", response_model=List[Message], summary="List Messages")
 def list_messages():
