@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, LargeBinary
 from sqlalchemy.sql import func
 from ..core.database import Base
 
@@ -20,6 +20,7 @@ class Resume(Base):
     experience = Column(JSON, nullable=True)  # Store as JSON array
     projects = Column(JSON, nullable=True)  # Store as JSON array
     education = Column(JSON, nullable=True)  # Store as JSON array
+    pdf_data = Column(LargeBinary, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
