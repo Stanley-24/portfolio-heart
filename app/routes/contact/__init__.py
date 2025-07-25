@@ -12,10 +12,6 @@ from sqlalchemy.orm import Session
 
 router = APIRouter()
 
-# Fake in-memory DBs
-fake_bookcall_db = []
-fake_message_db = []
-
 # Helper: validate book call fields
 def validate_bookcall(data: BookCallCreate):
     if not data.name or not data.email or not data.preferred_datetime or not data.video_call_provider:
@@ -64,7 +60,6 @@ def book_call(data: BookCallCreate, db: Session = Depends(get_db)):
         calendar_event_id=event.get("id"),
         **payload
     )
-    fake_bookcall_db.append(new_call)
     # Send booking confirmation and lead notification emails
     try:
         send_booking_confirmation_with_zoho(
@@ -87,7 +82,7 @@ def book_call(data: BookCallCreate, db: Session = Depends(get_db)):
 
 @router.get("/bookings", response_model=List[BookCall], summary="List Booked Calls")
 def list_booked_calls():
-    return fake_bookcall_db
+    raise HTTPException(status_code=501, detail="Not implemented. Use the database for bookings.")
 
 @router.post("/message", summary="Send Message")
 def send_message(data: MessageCreate, db: Session = Depends(get_db)):
@@ -116,4 +111,4 @@ def send_message(data: MessageCreate, db: Session = Depends(get_db)):
 
 @router.get("/messages", response_model=List[Message], summary="List Messages")
 def list_messages():
-    return fake_message_db 
+    raise HTTPException(status_code=501, detail="Not implemented. Use the database for messages.") 

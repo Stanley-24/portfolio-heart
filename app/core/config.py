@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "neondb"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: str = "5432"
-    
+    BACKEND_URL : str
     @property
     def DATABASE_URL(self) -> str:
         return (
