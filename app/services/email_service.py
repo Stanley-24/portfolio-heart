@@ -124,7 +124,7 @@ Stanley Owarieta Portfolio
         smtp.send_message(msg)
 
 
-def send_booking_confirmation_with_zoho(client_name, client_email, call_datetime, provider, call_link, owner_email=None):
+def send_booking_confirmation_with_zoho(client_name, client_email, call_datetime, provider, call_link, owner_email=None, client_message=None):
     smtp_server = os.getenv("ZOHO_SMTP_SERVER")
     smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
     smtp_user = os.getenv("ZOHO_SMTP_USER")
@@ -136,43 +136,60 @@ def send_booking_confirmation_with_zoho(client_name, client_email, call_datetime
     if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
         raise Exception("SMTP credentials are not fully set in environment variables.")
 
-    subject = f"Call Booking Confirmation for {client_name}"
-    html_content = f"""
+    # --- Client Email ---
+    client_subject = "Your Call is Booked! [Google Meet Link Inside]"
+    client_html = f"""
     <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>
       <div style='max-width:520px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px #e3e8f0;padding:32px;'>
         <h2 style='color:#2563eb;margin-bottom:8px;'>Your Call is Booked!</h2>
         <p style='font-size:1.1em;color:#222;'>Hi {client_name},<br/>
-          Thank you for booking a call. Here are your details:</p>
+          Thank you for booking a call! Here are your meeting details:</p>
         <ul style='color:#222;font-size:1.05em;'>
           <li><b>Date & Time:</b> {call_datetime}</li>
-          <li><b>Provider:</b> {provider}</li>
           <li><b>Google Meet Link:</b> <a href='{call_link}' style='color:#2563eb;text-decoration:underline;'>{call_link}</a></li>
         </ul>
         <div style='background:#f1f5f9;border-radius:6px;padding:16px;margin:24px 0;'>
-          <b style='color:#2563eb;'>What to expect:</b><br/>
-          <span style='color:#222;'>You will receive a reminder before the call. Please join the meeting a few minutes early. If you have any questions, feel free to reply to this email.</span>
+          <b style='color:#2563eb;'>Please save this link to your notepad or calendar. You’ll use it to join the call.</b>
         </div>
         <p style='margin-top:2em;font-size:1em;color:#444;'>
           Looking forward to speaking with you!<br/>
-          <span style='color:#2563eb;font-weight:bold;'>Stanley Owarieta Portfolio</span>
+          <span style='color:#2563eb;font-weight:bold;'>Stanley Owarieta</span>
         </p>
       </div>
     </body></html>
     """
-    # Send to client
     msg_client = EmailMessage()
-    msg_client['Subject'] = subject
+    msg_client['Subject'] = client_subject
     msg_client['From'] = from_email
     msg_client['To'] = client_email
-    msg_client.set_content(f"Your call is booked for {call_datetime} via {provider}. Call Link: {call_link}")
-    msg_client.add_alternative(html_content, subtype='html')
-    # Send to owner
+    msg_client.set_content(f"Your call is booked for {call_datetime}. Google Meet Link: {call_link}")
+    msg_client.add_alternative(client_html, subtype='html')
+
+    # --- Owner Email ---
+    owner_subject = f"New Lead: Call Booked by {client_name}"
+    owner_html = f"""
+    <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>
+      <div style='max-width:520px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px #e3e8f0;padding:32px;'>
+        <h2 style='color:#2563eb;margin-bottom:8px;'>New Lead: Call Booked</h2>
+        <ul style='color:#222;font-size:1.05em;'>
+          <li><b>Name:</b> {client_name}</li>
+          <li><b>Email:</b> {client_email}</li>
+          <li><b>Date & Time:</b> {call_datetime}</li>
+          <li><b>Google Meet Link:</b> <a href='{call_link}' style='color:#2563eb;text-decoration:underline;'>{call_link}</a></li>
+          <li><b>Message:</b> {client_message or '(none)'}</li>
+        </ul>
+      </div>
+    </body></html>
+    """
     msg_owner = EmailMessage()
-    msg_owner['Subject'] = subject
+    msg_owner['Subject'] = owner_subject
     msg_owner['From'] = from_email
     msg_owner['To'] = owner_email
-    msg_owner.set_content(f"Call with {client_name} booked for {call_datetime} via {provider}. Call Link: {call_link}")
-    msg_owner.add_alternative(html_content, subtype='html')
+    msg_owner.set_content(
+        f"New lead booked a call.\nName: {client_name}\nEmail: {client_email}\nDate & Time: {call_datetime}\nGoogle Meet Link: {call_link}\nMessage: {client_message or '(none)'}"
+    )
+    msg_owner.add_alternative(owner_html, subtype='html')
+
     with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
         smtp.login(smtp_user, smtp_pass)
         smtp.send_message(msg_client)
