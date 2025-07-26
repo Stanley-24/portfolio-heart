@@ -74,22 +74,37 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), admin: An
 
 @router.put("/{project_id}", summary="Update Project")
 def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    print(f"[DEBUG] Updating project {project_id}")
+    print(f"[DEBUG] Received update data: {data}")
+    print(f"[DEBUG] Data model dump: {data.model_dump()}")
+    
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         return {"message": "Project not found", "success": False}
+    
     snake_data = camel_to_snake(data.model_dump(exclude_unset=True))
+    print(f"[DEBUG] Snake case data: {snake_data}")
+    
     for key, value in snake_data.items():
         if value is not None:
+            print(f"[DEBUG] Setting {key} = {value}")
             setattr(project, key, value)
+    
     db.commit()
     db.refresh(project)
+    print(f"[DEBUG] Updated project: {project.github_url}, {project.live_url}")
     return {"message": "Project updated successfully.", "success": True, "project": project}
 
 @router.delete("/{project_id}", status_code=200, summary="Delete Project")
 def delete_project(project_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    print(f"[DEBUG] Deleting project {project_id}")
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
+        print(f"[DEBUG] Project {project_id} not found")
         return {"message": "Project not found", "success": False}
+    
+    print(f"[DEBUG] Found project: {project.title}")
     db.delete(project)
     db.commit()
+    print(f"[DEBUG] Project {project_id} deleted successfully")
     return {"message": "Project deleted successfully.", "success": True} 
