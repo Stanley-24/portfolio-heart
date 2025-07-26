@@ -19,11 +19,11 @@ def validate_newsletter(data: NewsletterCreate):
 
 @router.post("/subscribe", summary="Subscribe to Newsletter")
 def subscribe_newsletter(data: NewsletterCreate, db: Session = Depends(get_db)):
-        validate_newsletter(data)
+    validate_newsletter(data)
     # Prevent duplicate emails
     existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == data.email).first()
     if existing:
-            return {"message": "Email already subscribed.", "success": False}
+        return {"message": "Email already subscribed.", "success": False}
     new_sub = NewsletterSubscriber(email=data.email, is_active=True, subscribed_at=datetime.utcnow())
     db.add(new_sub)
     db.commit()
@@ -41,13 +41,13 @@ def send_newsletter_welcome_email(email):
     smtp_user = os.getenv("ZOHO_SMTP_USER")
     smtp_pass = os.getenv("ZOHO_SMTP_PASS")
     from_email = os.getenv("EMAIL_FROM")
-    subject = "Welcome to Stanley’s Newsletter!"
+    subject = "Welcome to Stanley's Newsletter!"
     html_content = f"""
     <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>
       <div style='max-width:520px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px #e3e8f0;padding:32px;'>
-        <h2 style='color:#2563eb;margin-bottom:8px;'>Welcome to Stanley’s Newsletter!</h2>
+        <h2 style='color:#2563eb;margin-bottom:8px;'>Welcome to Stanley's Newsletter!</h2>
         <p style='font-size:1.1em;color:#222;'>Hi there,<br/>
-          Thank you for subscribing to Stanley’s newsletter! You’ll now receive updates, tips, and news straight to your inbox.</p>
+          Thank you for subscribing to Stanley's newsletter! You'll now receive updates, tips, and news straight to your inbox.</p>
         <div style='background:#f1f5f9;border-radius:6px;padding:16px;margin:24px 0;'>
           <b style='color:#2563eb;'>If you have any questions or want to unsubscribe, just reply to this email.</b>
         </div>
@@ -62,7 +62,7 @@ def send_newsletter_welcome_email(email):
     msg['Subject'] = subject
     msg['From'] = from_email
     msg['To'] = email
-    msg.set_content("Thank you for subscribing to Stanley’s newsletter!")
+    msg.set_content("Thank you for subscribing to Stanley's newsletter!")
     msg.add_alternative(html_content, subtype='html')
     with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
         smtp.login(smtp_user, smtp_pass)
