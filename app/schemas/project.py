@@ -7,8 +7,8 @@ class ProjectBase(BaseModel):
     description: str
     thumbnail: Optional[HttpUrl] = None
     technologies: List[str]
-    githubUrl: Optional[HttpUrl] = Field(None, alias="github_url")
-    liveUrl: Optional[HttpUrl] = Field(None, alias="live_url")
+    githubUrl: Optional[str] = Field(None, alias="github_url")
+    liveUrl: Optional[str] = Field(None, alias="live_url")
     featured: bool = False
     createdAt: Optional[str] = Field(None, alias="created_at")
     featuredAt: Optional[str] = None

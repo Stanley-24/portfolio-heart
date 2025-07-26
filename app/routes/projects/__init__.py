@@ -13,10 +13,9 @@ router = APIRouter()
 router.include_router(upload_thumbnail_router)
 
 # Helper: validate project fields
-# (You may want to keep or update this for extra validation)
 def validate_project(data: ProjectCreate):
-    if not data.title or not data.description or not data.thumbnail or not data.technologies or not data.githubUrl or not data.liveUrl or not data.createdAt:
-        raise HTTPException(status_code=400, detail="All fields except featuredAt are required.")
+    if not data.title or not data.description or not data.technologies:
+        raise HTTPException(status_code=400, detail="Title, description, and technologies are required.")
     if not isinstance(data.technologies, list) or len(data.technologies) == 0:
         raise HTTPException(status_code=400, detail="At least one technology is required.")
 
@@ -52,13 +51,26 @@ def list_projects(db: Session = Depends(get_db)):
 
 @router.post("/", summary="Add Project")
 def create_project(data: ProjectCreate, db: Session = Depends(get_db), admin: Any = Depends(get_current_admin)):
-    validate_project(data)
-    snake_data = camel_to_snake(data.model_dump())
-    new_project = Project(**{k: v for k, v in snake_data.items() if v is not None})
-    db.add(new_project)
-    db.commit()
-    db.refresh(new_project)
-    return {"message": "Project created successfully.", "success": True, "project": new_project}
+    print(f"[DEBUG] Received project data: {data}")
+    print(f"[DEBUG] Data model dump: {data.model_dump()}")
+    try:
+        validate_project(data)
+        snake_data = camel_to_snake(data.model_dump())
+        print(f"[DEBUG] Snake case data: {snake_data}")
+        new_project = Project(**{k: v for k, v in snake_data.items() if v is not None})
+        db.add(new_project)
+        db.commit()
+        db.refresh(new_project)
+        return {"message": "Project created successfully.", "success": True, "project": new_project}
+    except HTTPException as e:
+        print(f"[DEBUG] HTTP Exception: {str(e)}")
+        raise e
+    except Exception as e:
+        print(f"[DEBUG] Error creating project: {str(e)}")
+        print(f"[DEBUG] Error type: {type(e)}")
+        import traceback
+        print(f"[DEBUG] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=400, detail=f"Failed to create project: {str(e)}")
 
 @router.put("/{project_id}", summary="Update Project")
 def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(get_db), admin=Depends(get_current_admin)):

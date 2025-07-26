@@ -19,11 +19,11 @@ def validate_newsletter(data: NewsletterCreate):
 
 @router.post("/subscribe", summary="Subscribe to Newsletter")
 def subscribe_newsletter(data: NewsletterCreate, db: Session = Depends(get_db)):
-    validate_newsletter(data)
+        validate_newsletter(data)
     # Prevent duplicate emails
     existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == data.email).first()
     if existing:
-        return {"message": "Email already subscribed.", "success": False}
+            return {"message": "Email already subscribed.", "success": False}
     new_sub = NewsletterSubscriber(email=data.email, is_active=True, subscribed_at=datetime.utcnow())
     db.add(new_sub)
     db.commit()
