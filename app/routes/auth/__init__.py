@@ -8,6 +8,7 @@ import json
 from fastapi.responses import RedirectResponse
 from fastapi import Request
 from google_auth_oauthlib.flow import Flow
+from pydantic import BaseModel
 from app.services.email_service import send_password_reset_email_with_zoho
 
 SECRET_KEY = "supersecretkey"  # Change in production
@@ -24,6 +25,14 @@ global_admin_password = {"value": ADMIN_PASSWORD}
 
 # In-memory storage for reset tokens (in production, use database)
 reset_tokens = {}
+
+# Request models
+class ResetPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordConfirmRequest(BaseModel):
+    token: str
+    new_password: str
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -77,9 +86,9 @@ def create_admin(email: str = Body(...), password: str = Body(...)):
     return {"message": "Admin account created successfully.", "success": True}
 
 @router.post("/reset-password", summary="Reset Admin Password")
-def reset_password(email: str = Body(...)):
+def reset_password(request: ResetPasswordRequest):
     """Send reset password email to admin"""
-    if email != ADMIN_EMAIL:
+    if request.email != ADMIN_EMAIL:
         # Don't reveal if email exists or not for security
         return {"message": "If the email exists, a reset link has been sent.", "success": True}
     
@@ -91,7 +100,7 @@ def reset_password(email: str = Body(...)):
         # Store token with expiration (1 hour from now)
         expiration = datetime.utcnow() + timedelta(hours=1)
         reset_tokens[reset_token] = {
-            "email": email,
+            "email": request.email,
             "expires": expiration
         }
         
@@ -100,7 +109,7 @@ def reset_password(email: str = Body(...)):
         reset_url = f"{base_url}/admin/reset-password?token={reset_token}"
         
         # Send the email
-        send_password_reset_email_with_zoho(email, reset_token, reset_url)
+        send_password_reset_email_with_zoho(request.email, reset_token, reset_url)
         
         return {"message": "If the email exists, a reset link has been sent.", "success": True}
         
@@ -117,28 +126,28 @@ def reset_admin():
     return {"message": "Admin credentials reset.", "success": True}
 
 @router.post("/reset-password-confirm", summary="Confirm Password Reset")
-def reset_password_confirm(token: str = Body(...), new_password: str = Body(...)):
+def reset_password_confirm(request: ResetPasswordConfirmRequest):
     """Confirm password reset with token and new password"""
-    if token not in reset_tokens:
+    if request.token not in reset_tokens:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
     
-    token_data = reset_tokens[token]
+    token_data = reset_tokens[request.token]
     
     # Check if token has expired
     if datetime.utcnow() > token_data["expires"]:
         # Remove expired token
-        del reset_tokens[token]
+        del reset_tokens[request.token]
         raise HTTPException(status_code=400, detail="Reset token has expired.")
     
     # Validate new password
-    if not new_password or len(new_password) < 6:
+    if not request.new_password or len(request.new_password) < 6:
         raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
     
     # Update the password
-    global_admin_password["value"] = new_password
+    global_admin_password["value"] = request.new_password
     
     # Remove the used token
-    del reset_tokens[token]
+    del reset_tokens[request.token]
     
     return {"message": "Password reset successfully.", "success": True}
 
