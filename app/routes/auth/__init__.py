@@ -118,8 +118,16 @@ def reset_password(request: ResetPasswordRequest):
         
         # Send the email
         print(f"[DEBUG] Attempting to send email...")
-        send_password_reset_email_with_zoho(request.email, reset_token, reset_url)
-        print(f"[DEBUG] Email sent successfully!")
+        try:
+            send_password_reset_email_with_zoho(request.email, reset_token, reset_url)
+            print(f"[DEBUG] Email sent successfully!")
+        except Exception as email_error:
+            print(f"[DEBUG] Email sending failed: {email_error}")
+            print(f"[DEBUG] Email error type: {type(email_error)}")
+            import traceback
+            print(f"[DEBUG] Email error traceback: {traceback.format_exc()}")
+            # Still return success to user for security, but log the error
+            return {"message": "If the email exists, a reset link has been sent.", "success": True}
         
         return {"message": "If the email exists, a reset link has been sent.", "success": True}
         

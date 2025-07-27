@@ -64,9 +64,15 @@ Stanley Owarieta
     msg.add_attachment(file_data, maintype='application', subtype='pdf', filename=file_name)
 
     # Send the email via Zoho SMTP
+    print(f"[EMAIL DEBUG] Attempting SMTP connection...")
     with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+        print(f"[EMAIL DEBUG] SMTP connection established")
+        print(f"[EMAIL DEBUG] Attempting login...")
         smtp.login(smtp_user, smtp_pass)
-        smtp.send_message(msg) 
+        print(f"[EMAIL DEBUG] Login successful")
+        print(f"[EMAIL DEBUG] Sending message...")
+        smtp.send_message(msg)
+        print(f"[EMAIL DEBUG] Message sent successfully!") 
 
 
 def send_contact_message_with_zoho(name, email, message, subject=None):
@@ -200,13 +206,21 @@ def send_password_reset_email_with_zoho(to_email, reset_token, reset_url):
     """
     Send password reset email to admin
     """
+    print(f"[EMAIL DEBUG] Starting password reset email to: {to_email}")
     smtp_server = os.getenv("ZOHO_SMTP_SERVER")
     smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
     smtp_user = os.getenv("ZOHO_SMTP_USER")
     smtp_pass = os.getenv("ZOHO_SMTP_PASS")
     from_email = os.getenv("EMAIL_FROM")
 
+    print(f"[EMAIL DEBUG] SMTP Server: {smtp_server}")
+    print(f"[EMAIL DEBUG] SMTP Port: {smtp_port}")
+    print(f"[EMAIL DEBUG] SMTP User: {smtp_user}")
+    print(f"[EMAIL DEBUG] From Email: {from_email}")
+    print(f"[EMAIL DEBUG] To Email: {to_email}")
+
     if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
+        print(f"[EMAIL DEBUG] Missing SMTP credentials")
         raise Exception("SMTP credentials are not fully set in environment variables.")
 
     msg = EmailMessage()
