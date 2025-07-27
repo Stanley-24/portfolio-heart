@@ -8,7 +8,7 @@ import json
 from fastapi.responses import RedirectResponse
 from fastapi import Request
 from google_auth_oauthlib.flow import Flow
-from ..services.email_service import send_password_reset_email_with_zoho
+from app.services.email_service import send_password_reset_email_with_zoho
 
 SECRET_KEY = "supersecretkey"  # Change in production
 ALGORITHM = "HS256"
