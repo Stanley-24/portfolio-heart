@@ -1,11 +1,12 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import datetime
 
 class NewsletterBase(BaseModel):
     email: EmailStr
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     is_active: bool = True
-    subscribed_at: Optional[str] = None
-    unsubscribed_at: Optional[str] = None
 
 class NewsletterCreate(NewsletterBase):
     pass
@@ -14,7 +15,9 @@ class NewsletterUpdate(NewsletterBase):
     pass
 
 class Newsletter(NewsletterBase):
-    id: str
+    id: int
+    subscribed_at: Optional[datetime] = None
+    unsubscribed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True 

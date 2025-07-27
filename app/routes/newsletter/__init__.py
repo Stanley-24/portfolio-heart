@@ -4,7 +4,7 @@ from app.schemas.newsletter import Newsletter, NewsletterCreate, NewsletterUpdat
 from app.models.newsletter import NewsletterSubscriber
 from app.core.database import get_db
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.routes.auth import get_current_admin
 import os
 import smtplib
@@ -33,6 +33,39 @@ def subscribe_newsletter(data: NewsletterCreate, db: Session = Depends(get_db)):
     # Send lead notification to owner
     send_newsletter_lead_notification(data.email)
     return {"message": "Subscribed successfully.", "success": True, "subscriber": {"email": new_sub.email}}
+
+@router.get("/admin", response_model=List[Newsletter], summary="Get All Newsletter Subscribers (Admin)")
+def get_all_subscribers(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    """Get all newsletter subscribers (admin only)"""
+    return db.query(NewsletterSubscriber).order_by(NewsletterSubscriber.subscribed_at.desc()).all()
+
+@router.delete("/admin/{subscriber_id}", summary="Delete Newsletter Subscriber (Admin)")
+def delete_subscriber(subscriber_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    """Delete a newsletter subscriber (admin only)"""
+    subscriber = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.id == subscriber_id).first()
+    if not subscriber:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+    db.delete(subscriber)
+    db.commit()
+    return {"message": "Subscriber deleted successfully", "success": True}
+
+@router.get("/admin/stats", summary="Get Newsletter Statistics (Admin)")
+def get_newsletter_stats(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    """Get newsletter statistics (admin only)"""
+    total_subscribers = db.query(NewsletterSubscriber).count()
+    active_subscribers = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.is_active == True).count()
+    
+    # Get recent subscribers (last 7 days)
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    recent_subscribers = db.query(NewsletterSubscriber).filter(
+        NewsletterSubscriber.subscribed_at >= week_ago
+    ).count()
+    
+    return {
+        "total_subscribers": total_subscribers,
+        "active_subscribers": active_subscribers,
+        "recent_subscribers": recent_subscribers
+    }
 
 # Email sending helpers
 def send_newsletter_welcome_email(email):

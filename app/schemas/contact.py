@@ -1,37 +1,30 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
+from datetime import datetime
 
-class BookCallBase(BaseModel):
-    name: str
+class ContactMessageBase(BaseModel):
+    name: str = Field(..., max_length=255)
     email: EmailStr
-    preferred_datetime: str
-    message: Optional[str] = None
-    video_call_provider: str
-    video_call_link: Optional[str] = None  # Will be empty for now
+    subject: str = Field(..., max_length=255)
+    message: str = Field(..., max_length=2000)
+    phone: Optional[str] = Field(None, max_length=50)
+    company: Optional[str] = Field(None, max_length=255)
 
-class BookCallCreate(BookCallBase):
+class ContactMessageCreate(ContactMessageBase):
     pass
 
-class BookCall(BookCallBase):
-    id: str
-    contacted_at: str
-    calendar_event_id: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-class MessageBase(BaseModel):
-    name: str
-    email: EmailStr
-    message: str
-    subject: Optional[str] = None
-
-class MessageCreate(MessageBase):
+class ContactMessageUpdate(ContactMessageBase):
     pass
 
-class Message(MessageBase):
-    id: str
-    sent_at: str
+class ContactMessageOut(ContactMessageBase):
+    id: int
+    is_read: bool = False
+    is_replied: bool = False
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    created_at: datetime
+    read_at: Optional[datetime] = None
+    replied_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True 
