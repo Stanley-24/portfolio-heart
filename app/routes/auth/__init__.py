@@ -88,14 +88,20 @@ def create_admin(email: str = Body(...), password: str = Body(...)):
 @router.post("/reset-password", summary="Reset Admin Password")
 def reset_password(request: ResetPasswordRequest):
     """Send reset password email to admin"""
+    print(f"[DEBUG] Reset password requested for: {request.email}")
+    print(f"[DEBUG] ADMIN_EMAIL is: {ADMIN_EMAIL}")
+    
     if request.email != ADMIN_EMAIL:
+        print(f"[DEBUG] Email mismatch - returning early")
         # Don't reveal if email exists or not for security
         return {"message": "If the email exists, a reset link has been sent.", "success": True}
     
     try:
+        print(f"[DEBUG] Email matches - proceeding with reset")
         # Generate a secure reset token
         import secrets
         reset_token = secrets.token_urlsafe(32)
+        print(f"[DEBUG] Generated token: {reset_token[:10]}...")
         
         # Store token with expiration (1 hour from now)
         expiration = datetime.utcnow() + timedelta(hours=1)
@@ -103,18 +109,25 @@ def reset_password(request: ResetPasswordRequest):
             "email": request.email,
             "expires": expiration
         }
+        print(f"[DEBUG] Token stored with expiration: {expiration}")
         
         # Create reset URL (in production, use your actual frontend URL)
         base_url = os.getenv("FRONTEND_URL", "https://portfolio-heart.vercel.app")
         reset_url = f"{base_url}/admin/reset-password?token={reset_token}"
+        print(f"[DEBUG] Reset URL: {reset_url}")
         
         # Send the email
+        print(f"[DEBUG] Attempting to send email...")
         send_password_reset_email_with_zoho(request.email, reset_token, reset_url)
+        print(f"[DEBUG] Email sent successfully!")
         
         return {"message": "If the email exists, a reset link has been sent.", "success": True}
         
     except Exception as e:
-        print(f"Error sending reset email: {e}")
+        print(f"[DEBUG] Error sending reset email: {e}")
+        print(f"[DEBUG] Error type: {type(e)}")
+        import traceback
+        print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
         # Don't reveal internal errors to user
         return {"message": "If the email exists, a reset link has been sent.", "success": True}
 
