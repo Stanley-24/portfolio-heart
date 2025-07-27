@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from fastapi.responses import Response
-from app.schemas.resume import ResumeStats as ResumeStatsSchema
+from app.schemas.resume import ResumeStats as ResumeStatsSchema, Resume as ResumeSchema
 from datetime import datetime
 from app.routes.auth import get_current_admin
-from typing import Any
+from typing import Any, List
 from app.models.resume import ResumeStats, Resume
 from app.core.database import get_db
 from sqlalchemy.orm import Session
@@ -70,4 +70,32 @@ def get_resume_stats(db: Session = Depends(get_db), admin=Depends(get_current_ad
         stats = ResumeStats(downloads=0, views=0, last_download=None)
         db.add(stats)
         db.commit()
-    return stats 
+    return stats
+
+@router.get("/", response_model=List[ResumeSchema], summary="List All Resumes")
+def list_resumes(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    """Get all resumes (admin only)"""
+    return db.query(Resume).all()
+
+@router.get("/info", response_model=ResumeSchema, summary="Get Resume Info")
+def get_resume_info(db: Session = Depends(get_db)):
+    """Get resume information (public)"""
+    resume = db.query(Resume).first()
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found.")
+    return resume
+
+@router.put("/info", summary="Update Resume Info")
+def update_resume_info(resume_data: ResumeSchema, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    """Update resume information (admin only)"""
+    resume = db.query(Resume).first()
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found.")
+    
+    for key, value in resume_data.model_dump(exclude_unset=True).items():
+        if key != 'id':  # Don't update the ID
+            setattr(resume, key, value)
+    
+    db.commit()
+    db.refresh(resume)
+    return {"message": "Resume information updated successfully.", "success": True, "resume": resume} 
