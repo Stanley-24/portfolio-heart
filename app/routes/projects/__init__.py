@@ -54,14 +54,14 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), admin: An
     print(f"[DEBUG] Received project data: {data}")
     print(f"[DEBUG] Data model dump: {data.model_dump()}")
     try:
-    validate_project(data)
-    snake_data = camel_to_snake(data.model_dump())
+        validate_project(data)
+        snake_data = camel_to_snake(data.model_dump())
         print(f"[DEBUG] Snake case data: {snake_data}")
-    new_project = Project(**{k: v for k, v in snake_data.items() if v is not None})
-    db.add(new_project)
-    db.commit()
-    db.refresh(new_project)
-    return {"message": "Project created successfully.", "success": True, "project": new_project}
+        new_project = Project(**{k: v for k, v in snake_data.items() if v is not None})
+        db.add(new_project)
+        db.commit()
+        db.refresh(new_project)
+        return {"message": "Project created successfully.", "success": True, "project": new_project}
     except HTTPException as e:
         print(f"[DEBUG] HTTP Exception: {str(e)}")
         raise e
