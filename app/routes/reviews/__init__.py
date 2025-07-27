@@ -28,14 +28,21 @@ def list_reviews(approved_only: bool = False, user_id: str = None, db: Session =
         )
     return query.all()
 
+@router.get("/admin", response_model=List[ReviewSchema], summary="List All Reviews (Admin)")
+def list_all_reviews(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    return db.query(Review).all()
+
 @router.get("/user/{user_identifier}", response_model=List[ReviewSchema], summary="Get User's Reviews")
 def get_user_reviews(user_identifier: str, db: Session = Depends(get_db)):
     """Get all reviews by a specific user (both approved and pending)"""
     return db.query(Review).filter(Review.client_name == user_identifier).all()
 
-@router.get("/admin", response_model=List[ReviewSchema], summary="List All Reviews (Admin)")
-def list_all_reviews(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
-    return db.query(Review).all()
+@router.get("/{review_id}", response_model=ReviewSchema, summary="Get Review by ID")
+def get_review_by_id(review_id: int, db: Session = Depends(get_db)):
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    return review
 
 @router.post("/", summary="Add Review")
 def create_review(data: ReviewCreate, db: Session = Depends(get_db)):
