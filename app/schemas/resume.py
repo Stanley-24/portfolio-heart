@@ -5,7 +5,7 @@ from datetime import datetime
 class ResumeBase(BaseModel):
     name: str
     title: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     phone: str
     location: str
     portfolio: Optional[str] = None

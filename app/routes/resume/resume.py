@@ -100,7 +100,29 @@ def get_resume_info(db: Session = Depends(get_db)):
     resume = db.query(Resume).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found.")
-    return resume
+    
+    # Handle empty email field to prevent validation error
+    resume_data = {
+        "id": resume.id,
+        "name": resume.name or "",
+        "title": resume.title or "",
+        "email": resume.email or "no-email@example.com",  # Provide default email if empty
+        "phone": resume.phone or "",
+        "location": resume.location or "",
+        "portfolio": resume.portfolio or None,
+        "github": resume.github or None,
+        "linkedin": resume.linkedin or None,
+        "twitter": resume.twitter or None,
+        "summary": resume.summary or "",
+        "skills": resume.skills or [],
+        "experience": resume.experience or [],
+        "projects": resume.projects or [],
+        "education": resume.education or [],
+        "created_at": resume.created_at,
+        "updated_at": resume.updated_at
+    }
+    
+    return resume_data
 
 @router.put("/info", summary="Update Resume Info")
 def update_resume_info(resume_data: ResumeSchema, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
