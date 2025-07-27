@@ -27,16 +27,17 @@ def upload_resume_pdf(file: UploadFile = File(...), db: Session = Depends(get_db
 
 @router.get("/view", summary="View Resume Pdf (No Download)")
 def view_resume_pdf(db: Session = Depends(get_db)):
-    """View resume PDF without downloading (increments view count)"""
+    """View resume PDF without downloading (increments download count since it's the same action)"""
     resume = db.query(Resume).first()
     if not resume or not resume.pdf_data:
         raise HTTPException(status_code=404, detail="Resume PDF not found in database.")
     stats = db.query(ResumeStats).first()
     if not stats:
-        stats = ResumeStats(downloads=0, views=1, last_download=None)
+        stats = ResumeStats(downloads=1, views=0, last_download=datetime.utcnow())
         db.add(stats)
     else:
-        stats.views += 1
+        stats.downloads += 1
+        stats.last_download = datetime.utcnow()  # Update last access time
     db.commit()
     return Response(resume.pdf_data, media_type="application/pdf", headers={"Content-Disposition": "inline; filename=resume.pdf"})
 
@@ -52,7 +53,7 @@ def download_resume_pdf(db: Session = Depends(get_db)):
         db.add(stats)
     else:
         stats.downloads += 1
-        stats.last_download = datetime.utcnow()
+        stats.last_download = datetime.utcnow()  # Update last access time
     db.commit()
     return Response(resume.pdf_data, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=resume.pdf"})
 
