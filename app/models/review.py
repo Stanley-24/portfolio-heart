@@ -15,6 +15,7 @@ class Review(Base):
     project_type = Column(String(100), nullable=True)  # e.g., "web development", "consulting"
     is_featured = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
+    is_approved = Column(Boolean, default=False)  # New approval status field
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

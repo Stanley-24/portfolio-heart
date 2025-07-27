@@ -6,6 +6,7 @@ class ReviewBase(BaseModel):
     review_text: str
     client_avatar: Optional[str] = None
     rating: int = Field(..., ge=1, le=5)
+    is_approved: Optional[bool] = False
 
 class ReviewCreate(ReviewBase):
     pass

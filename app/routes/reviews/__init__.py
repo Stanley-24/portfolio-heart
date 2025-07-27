@@ -16,7 +16,14 @@ def validate_review(data: ReviewCreate):
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
 
 @router.get("/", response_model=List[ReviewSchema], summary="List Reviews")
-def list_reviews(db: Session = Depends(get_db)):
+def list_reviews(approved_only: bool = False, db: Session = Depends(get_db)):
+    query = db.query(Review)
+    if approved_only:
+        query = query.filter(Review.is_approved == True)
+    return query.all()
+
+@router.get("/admin", response_model=List[ReviewSchema], summary="List All Reviews (Admin)")
+def list_all_reviews(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     return db.query(Review).all()
 
 @router.post("/", summary="Add Review")
@@ -53,4 +60,24 @@ def delete_review(review_id: int, db: Session = Depends(get_db), admin=Depends(g
         return {"message": "Review not found", "success": False}
     db.delete(review)
     db.commit()
-    return {"message": "Review deleted successfully.", "success": True} 
+    return {"message": "Review deleted successfully.", "success": True}
+
+@router.patch("/{review_id}/approve", summary="Approve Review")
+def approve_review(review_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        return {"message": "Review not found", "success": False}
+    review.is_approved = True
+    db.commit()
+    db.refresh(review)
+    return {"message": "Review approved successfully.", "success": True, "review": review}
+
+@router.patch("/{review_id}/reject", summary="Reject Review")
+def reject_review(review_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        return {"message": "Review not found", "success": False}
+    review.is_approved = False
+    db.commit()
+    db.refresh(review)
+    return {"message": "Review rejected successfully.", "success": True, "review": review} 
