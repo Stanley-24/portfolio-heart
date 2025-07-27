@@ -16,11 +16,22 @@ def validate_review(data: ReviewCreate):
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
 
 @router.get("/", response_model=List[ReviewSchema], summary="List Reviews")
-def list_reviews(approved_only: bool = False, db: Session = Depends(get_db)):
+def list_reviews(approved_only: bool = False, user_id: str = None, db: Session = Depends(get_db)):
     query = db.query(Review)
     if approved_only:
         query = query.filter(Review.is_approved == True)
+    elif user_id:
+        # Show approved reviews + user's own pending reviews
+        query = query.filter(
+            (Review.is_approved == True) | 
+            (Review.client_name == user_id)  # Using client_name as user identifier
+        )
     return query.all()
+
+@router.get("/user/{user_identifier}", response_model=List[ReviewSchema], summary="Get User's Reviews")
+def get_user_reviews(user_identifier: str, db: Session = Depends(get_db)):
+    """Get all reviews by a specific user (both approved and pending)"""
+    return db.query(Review).filter(Review.client_name == user_identifier).all()
 
 @router.get("/admin", response_model=List[ReviewSchema], summary="List All Reviews (Admin)")
 def list_all_reviews(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
