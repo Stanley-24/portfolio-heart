@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from app.schemas.contact import ContactMessage, ContactMessageCreate, ContactMessageOut
+from app.schemas.contact import ContactMessageCreate, ContactMessageOut
 from app.models.contact import ContactMessage as ContactMessageModel
 from app.core.database import get_db
 from sqlalchemy.orm import Session
