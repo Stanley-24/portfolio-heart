@@ -64,15 +64,46 @@ Stanley Owarieta
     msg.add_attachment(file_data, maintype='application', subtype='pdf', filename=file_name)
 
     # Send the email via Zoho SMTP
-    print(f"[EMAIL DEBUG] Attempting SMTP connection...")
-    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
-        print(f"[EMAIL DEBUG] SMTP connection established")
-        print(f"[EMAIL DEBUG] Attempting login...")
-        smtp.login(smtp_user, smtp_pass)
-        print(f"[EMAIL DEBUG] Login successful")
-        print(f"[EMAIL DEBUG] Sending message...")
-        smtp.send_message(msg)
-        print(f"[EMAIL DEBUG] Message sent successfully!") 
+    print(f"[EMAIL DEBUG] ===== STARTING SMTP CONNECTION =====")
+    print(f"[EMAIL DEBUG] Connecting to {smtp_server}:{smtp_port}...")
+    
+    try:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+            print(f"[EMAIL DEBUG] ✅ SMTP SSL connection established")
+            
+            print(f"[EMAIL DEBUG] Attempting login with user: {smtp_user}")
+            smtp.login(smtp_user, smtp_pass)
+            print(f"[EMAIL DEBUG] ✅ Login successful")
+            
+            print(f"[EMAIL DEBUG] Sending message to: {to_email}")
+            result = smtp.send_message(msg)
+            print(f"[EMAIL DEBUG] ✅ Message sent successfully!")
+            print(f"[EMAIL DEBUG] SMTP Response: {result}")
+            
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"[EMAIL DEBUG] ❌ SMTP Authentication Error: {e}")
+        raise
+    except smtplib.SMTPRecipientsRefused as e:
+        print(f"[EMAIL DEBUG] ❌ SMTP Recipients Refused: {e}")
+        raise
+    except smtplib.SMTPSenderRefused as e:
+        print(f"[EMAIL DEBUG] ❌ SMTP Sender Refused: {e}")
+        raise
+    except smtplib.SMTPDataError as e:
+        print(f"[EMAIL DEBUG] ❌ SMTP Data Error: {e}")
+        raise
+    except smtplib.SMTPConnectError as e:
+        print(f"[EMAIL DEBUG] ❌ SMTP Connect Error: {e}")
+        raise
+    except smtplib.SMTPHeloError as e:
+        print(f"[EMAIL DEBUG] ❌ SMTP Helo Error: {e}")
+        raise
+    except Exception as e:
+        print(f"[EMAIL DEBUG] ❌ Unexpected SMTP Error: {e}")
+        print(f"[EMAIL DEBUG] Error type: {type(e)}")
+        raise
+    
+    print(f"[EMAIL DEBUG] ===== EMAIL SENDING COMPLETE =====") 
 
 
 def send_contact_message_with_zoho(name, email, message, subject=None):
@@ -206,30 +237,50 @@ def send_password_reset_email_with_zoho(to_email, reset_token, reset_url):
     """
     Send password reset email to admin
     """
-    print(f"[EMAIL DEBUG] Starting password reset email to: {to_email}")
+    print(f"[EMAIL DEBUG] ===== STARTING PASSWORD RESET EMAIL =====")
+    print(f"[EMAIL DEBUG] To Email: {to_email}")
+    print(f"[EMAIL DEBUG] Reset Token: {reset_token[:10]}...")
+    print(f"[EMAIL DEBUG] Reset URL: {reset_url}")
+    
+    # Get environment variables
+    print(f"[EMAIL DEBUG] Getting environment variables...")
     smtp_server = os.getenv("ZOHO_SMTP_SERVER")
     smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
     smtp_user = os.getenv("ZOHO_SMTP_USER")
     smtp_pass = os.getenv("ZOHO_SMTP_PASS")
     from_email = os.getenv("EMAIL_FROM")
 
-    print(f"[EMAIL DEBUG] SMTP Server: {smtp_server}")
-    print(f"[EMAIL DEBUG] SMTP Port: {smtp_port}")
-    print(f"[EMAIL DEBUG] SMTP User: {smtp_user}")
-    print(f"[EMAIL DEBUG] From Email: {from_email}")
-    print(f"[EMAIL DEBUG] To Email: {to_email}")
+    print(f"[EMAIL DEBUG] Environment variables loaded:")
+    print(f"[EMAIL DEBUG] - SMTP Server: {smtp_server}")
+    print(f"[EMAIL DEBUG] - SMTP Port: {smtp_port}")
+    print(f"[EMAIL DEBUG] - SMTP User: {smtp_user}")
+    print(f"[EMAIL DEBUG] - From Email: {from_email}")
+    print(f"[EMAIL DEBUG] - SMTP Pass: {'*' * len(smtp_pass) if smtp_pass else 'NOT SET'}")
 
     if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
-        print(f"[EMAIL DEBUG] Missing SMTP credentials")
+        print(f"[EMAIL DEBUG] ❌ Missing SMTP credentials!")
+        print(f"[EMAIL DEBUG] - smtp_server: {bool(smtp_server)}")
+        print(f"[EMAIL DEBUG] - smtp_port: {bool(smtp_port)}")
+        print(f"[EMAIL DEBUG] - smtp_user: {bool(smtp_user)}")
+        print(f"[EMAIL DEBUG] - smtp_pass: {bool(smtp_pass)}")
+        print(f"[EMAIL DEBUG] - from_email: {bool(from_email)}")
         raise Exception("SMTP credentials are not fully set in environment variables.")
+    
+    print(f"[EMAIL DEBUG] ✅ All SMTP credentials present")
 
+    print(f"[EMAIL DEBUG] Creating email message...")
     msg = EmailMessage()
     msg['Subject'] = "Password Reset Request - Stanley Owarieta Portfolio Admin"
     msg['From'] = from_email
     msg['To'] = to_email
+    print(f"[EMAIL DEBUG] Email headers set:")
+    print(f"[EMAIL DEBUG] - Subject: {msg['Subject']}")
+    print(f"[EMAIL DEBUG] - From: {msg['From']}")
+    print(f"[EMAIL DEBUG] - To: {msg['To']}")
 
+    print(f"[EMAIL DEBUG] Setting email content...")
     # Plain text version
-    msg.set_content(f"""\
+    plain_text_content = f"""\
 Hello,
 
 You requested a password reset for your admin account.
@@ -243,10 +294,12 @@ If you didn't request this password reset, please ignore this email.
 
 Best regards,
 Stanley Owarieta Portfolio Admin
-""")
+"""
+    msg.set_content(plain_text_content)
+    print(f"[EMAIL DEBUG] ✅ Plain text content set")
 
     # HTML version
-    msg.add_alternative(f"""
+    html_content = f"""
     <html>
       <body style='font-family: Inter, Roboto, Arial, sans-serif; background: #f9f9fb; color: #23272f; padding: 0.5em;'>
         <div style='max-width: 480px; margin: 1.5em auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(102,126,234,0.08); border: 1px solid #e5e7eb; padding: 1.2em 1.2em 1.5em 1.2em;'>
@@ -278,7 +331,9 @@ Stanley Owarieta Portfolio Admin
         </div>
       </body>
     </html>
-    """, subtype='html')
+    """
+    msg.add_alternative(html_content, subtype='html')
+    print(f"[EMAIL DEBUG] ✅ HTML content set")
 
     # Send the email via Zoho SMTP
     with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
