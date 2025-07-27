@@ -193,4 +193,80 @@ def send_booking_confirmation_with_zoho(client_name, client_email, call_datetime
     with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
         smtp.login(smtp_user, smtp_pass)
         smtp.send_message(msg_client)
-        smtp.send_message(msg_owner) 
+        smtp.send_message(msg_owner)
+
+
+def send_password_reset_email_with_zoho(to_email, reset_token, reset_url):
+    """
+    Send password reset email to admin
+    """
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+
+    if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
+        raise Exception("SMTP credentials are not fully set in environment variables.")
+
+    msg = EmailMessage()
+    msg['Subject'] = "Password Reset Request - Stanley Owarieta Portfolio Admin"
+    msg['From'] = from_email
+    msg['To'] = to_email
+
+    # Plain text version
+    msg.set_content(f"""\
+Hello,
+
+You requested a password reset for your admin account.
+
+Click the following link to reset your password:
+{reset_url}
+
+This link will expire in 1 hour for security reasons.
+
+If you didn't request this password reset, please ignore this email.
+
+Best regards,
+Stanley Owarieta Portfolio Admin
+""")
+
+    # HTML version
+    msg.add_alternative(f"""
+    <html>
+      <body style='font-family: Inter, Roboto, Arial, sans-serif; background: #f9f9fb; color: #23272f; padding: 0.5em;'>
+        <div style='max-width: 480px; margin: 1.5em auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(102,126,234,0.08); border: 1px solid #e5e7eb; padding: 1.2em 1.2em 1.5em 1.2em;'>
+          <h2 style='color: #2563eb; margin-bottom: 1.5em; font-size: 1.5em;'>Password Reset Request</h2>
+          
+          <p style='font-size: 1.1em; margin-bottom: 1.5em; line-height: 1.6;'>
+            Hello,<br><br>
+            You requested a password reset for your admin account.
+          </p>
+          
+          <div style='text-align: center; margin: 2em 0;'>
+            <a href='{reset_url}' style='background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 0.8em 2em; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);'>
+              Reset Password
+            </a>
+          </div>
+          
+          <p style='font-size: 0.95em; color: #666; margin-bottom: 1.5em;'>
+            <strong>Important:</strong> This link will expire in 1 hour for security reasons.
+          </p>
+          
+          <p style='font-size: 0.95em; color: #666; margin-bottom: 1.5em;'>
+            If you didn't request this password reset, please ignore this email.
+          </p>
+          
+          <div style='font-weight: 500; color: #23272f; margin-top: 2em; padding-top: 1.5em; border-top: 1px solid #e5e7eb;'>
+            Best regards,<br>
+            <span style='color: #2563eb; font-weight: 700;'>Stanley Owarieta Portfolio Admin</span>
+          </div>
+        </div>
+      </body>
+    </html>
+    """, subtype='html')
+
+    # Send the email via Zoho SMTP
+    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+        smtp.login(smtp_user, smtp_pass)
+        smtp.send_message(msg) 

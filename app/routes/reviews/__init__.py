@@ -78,7 +78,7 @@ def delete_review(review_id: int, db: Session = Depends(get_db), admin=Depends(g
         return {"message": "Review not found", "success": False}
     db.delete(review)
     db.commit()
-    return {"message": "Review deleted successfully.", "success": True}
+    return {"message": "Review deleted successfully.", "success": True} 
 
 @router.patch("/{review_id}/approve", summary="Approve Review")
 def approve_review(review_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):

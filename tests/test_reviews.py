@@ -5,7 +5,7 @@ from main import app
 import pytest
 
 client = TestClient(app)
-ADMIN_EMAIL = "admin@example.com"
+ADMIN_EMAIL = "owarieta24@gmail.com"
 ADMIN_PASSWORD = "admin123"
 
 @pytest.fixture
