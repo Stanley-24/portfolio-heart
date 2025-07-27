@@ -44,7 +44,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 @router.post("/login", summary="Admin Login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    if form_data.username != ADMIN_EMAIL or form_data.password != global_admin_password["value"]:
+    if form_data.username.lower() != ADMIN_EMAIL.lower() or form_data.password != global_admin_password["value"]:
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     access_token = create_access_token({"sub": ADMIN_EMAIL, "role": "admin"})
     return {"access_token": access_token, "token_type": "bearer", "success": True}
@@ -55,7 +55,7 @@ def get_current_admin(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(status_code=401, detail="Could not validate credentials")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        if payload.get("sub") != ADMIN_EMAIL or payload.get("role") != "admin":
+        if payload.get("sub").lower() != ADMIN_EMAIL.lower() or payload.get("role") != "admin":
             raise credentials_exception
     except JWTError:
         raise credentials_exception
@@ -91,7 +91,7 @@ def reset_password(request: ResetPasswordRequest):
     print(f"[DEBUG] Reset password requested for: {request.email}")
     print(f"[DEBUG] ADMIN_EMAIL is: {ADMIN_EMAIL}")
     
-    if request.email != ADMIN_EMAIL:
+    if request.email.lower() != ADMIN_EMAIL.lower():
         print(f"[DEBUG] Email mismatch - returning early")
         # Don't reveal if email exists or not for security
         return {"message": "If the email exists, a reset link has been sent.", "success": True}
