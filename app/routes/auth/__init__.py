@@ -9,7 +9,6 @@ from fastapi.responses import RedirectResponse
 from fastapi import Request
 from google_auth_oauthlib.flow import Flow
 from pydantic import BaseModel
-from app.services.email_service import send_password_reset_email_with_zoho
 
 SECRET_KEY = "supersecretkey"  # Change in production
 ALGORITHM = "HS256"
@@ -23,16 +22,9 @@ router = APIRouter()
 # Use a mutable object to allow password change in-memory
 global_admin_password = {"value": ADMIN_PASSWORD}
 
-# In-memory storage for reset tokens (in production, use database)
-reset_tokens = {}
-
 # Request models
-class ResetPasswordRequest(BaseModel):
+class ForgotPasswordRequest(BaseModel):
     email: str
-
-class ResetPasswordConfirmRequest(BaseModel):
-    token: str
-    new_password: str
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -44,25 +36,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 @router.post("/login", summary="Admin Login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    print(f"[LOGIN DEBUG] Login attempt:")
-    print(f"[LOGIN DEBUG] - Username: {form_data.username}")
-    print(f"[LOGIN DEBUG] - Password length: {len(form_data.password) if form_data.password else 0}")
-    print(f"[LOGIN DEBUG] - ADMIN_EMAIL: {ADMIN_EMAIL}")
-    print(f"[LOGIN DEBUG] - Current stored password: {global_admin_password['value']}")
-    print(f"[LOGIN DEBUG] - Email match: {form_data.username.lower() == ADMIN_EMAIL.lower()}")
-    print(f"[LOGIN DEBUG] - Password match: {form_data.password == global_admin_password['value']}")
-    
     if form_data.username.lower() != ADMIN_EMAIL.lower() or form_data.password != global_admin_password["value"]:
-        print(f"[LOGIN DEBUG] ❌ Login failed - credentials mismatch")
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     
-    print(f"[LOGIN DEBUG] ✅ Login successful")
     access_token = create_access_token({"sub": ADMIN_EMAIL, "role": "admin"})
     return {"access_token": access_token, "token_type": "bearer", "success": True}
 
 # Dependency for protected endpoints
 def get_current_admin(token: str = Depends(oauth2_scheme)):
-    print(f"[DEBUG] get_current_admin called with token: {token}")
     credentials_exception = HTTPException(status_code=401, detail="Could not validate credentials")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -78,19 +59,12 @@ def change_password(
     new_password: str = Body(...),
     admin=Depends(get_current_admin)
 ):
-    print(f"[CHANGE DEBUG] Password change attempt")
-    print(f"[CHANGE DEBUG] - Old password match: {old_password == global_admin_password['value']}")
-    print(f"[CHANGE DEBUG] - New password length: {len(new_password) if new_password else 0}")
-    
     if old_password != global_admin_password["value"]:
-        print(f"[CHANGE DEBUG] ❌ Old password incorrect")
         raise HTTPException(status_code=400, detail="Old password is incorrect.")
     if not new_password or len(new_password) < 6:
-        print(f"[CHANGE DEBUG] ❌ New password too short")
         raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
     
     global_admin_password["value"] = new_password
-    print(f"[CHANGE DEBUG] ✅ Password changed successfully")
     return {"message": "Password changed successfully.", "success": True}
 
 @router.post("/quick-change-password", summary="Quick Change Admin Password (No Auth Required)")
@@ -100,29 +74,21 @@ def quick_change_password(
     secret_key: str = Body(...)
 ):
     """Quick password change for admin (requires secret key)"""
-    print(f"[QUICK CHANGE DEBUG] Quick password change attempt")
-    print(f"[QUICK CHANGE DEBUG] - Email: {email}")
-    print(f"[QUICK CHANGE DEBUG] - New password length: {len(new_password) if new_password else 0}")
-    
     # Verify email matches admin
     if email.lower() != ADMIN_EMAIL.lower():
-        print(f"[QUICK CHANGE DEBUG] ❌ Email mismatch")
         raise HTTPException(status_code=400, detail="Invalid email address.")
     
     # Verify secret key (you can change this to any secret you want)
     expected_secret = "stanley_admin_2024"
     if secret_key != expected_secret:
-        print(f"[QUICK CHANGE DEBUG] ❌ Invalid secret key")
         raise HTTPException(status_code=400, detail="Invalid secret key.")
     
     # Validate new password
     if not new_password or len(new_password) < 6:
-        print(f"[QUICK CHANGE DEBUG] ❌ Password too short")
         raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
     
     # Update password
     global_admin_password["value"] = new_password
-    print(f"[QUICK CHANGE DEBUG] ✅ Password changed successfully")
     return {"message": "Password changed successfully.", "success": True}
 
 @router.post("/create-admin", summary="Create Admin Account")
@@ -136,135 +102,34 @@ def create_admin(email: str = Body(...), password: str = Body(...)):
     global_admin_password["value"] = password
     return {"message": "Admin account created successfully.", "success": True}
 
-@router.post("/reset-password", summary="Reset Admin Password")
-def reset_password(request: ResetPasswordRequest):
-    """Send reset password email to admin"""
-    print(f"[DEBUG] Reset password requested for: {request.email}")
-    print(f"[DEBUG] ADMIN_EMAIL is: {ADMIN_EMAIL}")
-    
-    if request.email.lower() != ADMIN_EMAIL.lower():
-        print(f"[DEBUG] Email mismatch - returning early")
-        # Don't reveal if email exists or not for security
-        return {"message": "If the email exists, a reset link has been sent.", "success": True}
-    
-    try:
-        print(f"[DEBUG] Email matches - proceeding with reset")
-        # Generate a secure reset token
-        import secrets
-        reset_token = secrets.token_urlsafe(32)
-        print(f"[DEBUG] Generated token: {reset_token[:10]}...")
-        
-        # Store token with expiration (1 hour from now)
-        expiration = datetime.utcnow() + timedelta(hours=1)
-        reset_tokens[reset_token] = {
-            "email": request.email,
-            "expires": expiration
-        }
-        print(f"[DEBUG] Token stored with expiration: {expiration}")
-        
-        # Create reset URL (in production, use your actual frontend URL)
-        base_url = os.getenv("FRONTEND_URL", "https://portfolio-heart.vercel.app")
-        # Force the correct URL if the environment variable is wrong
-        if "stanley-o.vercel.app" in base_url:
-            base_url = "https://portfolio-heart.vercel.app"
-            print(f"[DEBUG] Corrected base URL to: {base_url}")
-        reset_url = f"{base_url}/admin/reset-password?token={reset_token}"
-        print(f"[DEBUG] Reset URL: {reset_url}")
-        print(f"[DEBUG] Base URL from env: {os.getenv('FRONTEND_URL', 'NOT SET')}")
-        
-        # Send the email
-        print(f"[DEBUG] Attempting to send email...")
-        try:
-            send_password_reset_email_with_zoho(request.email, reset_token, reset_url)
-            print(f"[DEBUG] Email sent successfully!")
-        except Exception as email_error:
-            print(f"[DEBUG] Email sending failed: {email_error}")
-            print(f"[DEBUG] Email error type: {type(email_error)}")
-            import traceback
-            print(f"[DEBUG] Email error traceback: {traceback.format_exc()}")
-            # Still return success to user for security, but log the error
-            return {"message": "If the email exists, a reset link has been sent.", "success": True}
-        
-        return {"message": "If the email exists, a reset link has been sent.", "success": True}
-        
-    except Exception as e:
-        print(f"[DEBUG] Error sending reset email: {e}")
-        print(f"[DEBUG] Error type: {type(e)}")
-        import traceback
-        print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-        # Don't reveal internal errors to user
-        return {"message": "If the email exists, a reset link has been sent.", "success": True}
+
 
 @router.post("/reset-admin", summary="Reset Admin Credentials (testing only)")
 def reset_admin():
     global ADMIN_EMAIL
     ADMIN_EMAIL = "owarieta24@gmail.com"
     global_admin_password["value"] = "admin123"
-    print(f"[RESET DEBUG] Admin credentials reset to default")
-    print(f"[RESET DEBUG] - Email: {ADMIN_EMAIL}")
-    print(f"[RESET DEBUG] - Password: {global_admin_password['value']}")
     return {"message": "Admin credentials reset to default (admin123).", "success": True}
 
 @router.post("/forgot-password", summary="Forgot Password - Reset to Default")
-def forgot_password(email: str = Body(...)):
-    """Reset password to default when email is slow"""
-    print(f"[FORGOT DEBUG] Forgot password request for: {email}")
-    
-    if email.lower() != ADMIN_EMAIL.lower():
-        print(f"[FORGOT DEBUG] ❌ Email mismatch")
-        return {"message": "If the email exists, password has been reset to default.", "success": True}
+def forgot_password(request: ForgotPasswordRequest):
+    """Reset password to default when user forgets password"""
+    if request.email.lower() != ADMIN_EMAIL.lower():
+        return {
+            "message": "Invalid email address. Please enter the correct admin email.", 
+            "success": False
+        }
     
     # Reset to default password
     global_admin_password["value"] = "admin123"
-    print(f"[FORGOT DEBUG] ✅ Password reset to default: admin123")
     
     return {
-        "message": "Password has been reset to default (admin123). Please login and change it immediately.", 
+        "message": "Password has been reset to default. You can now login with the default password.", 
         "success": True,
         "default_password": "admin123"
     }
 
-@router.post("/reset-password-confirm", summary="Confirm Password Reset")
-def reset_password_confirm(request: ResetPasswordConfirmRequest):
-    """Confirm password reset with token and new password"""
-    if request.token not in reset_tokens:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
-    
-    token_data = reset_tokens[request.token]
-    
-    # Check if token has expired
-    if datetime.utcnow() > token_data["expires"]:
-        # Remove expired token
-        del reset_tokens[request.token]
-        raise HTTPException(status_code=400, detail="Reset token has expired.")
-    
-    # Validate new password
-    if not request.new_password or len(request.new_password) < 6:
-        raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
-    
-    # Update the password
-    global_admin_password["value"] = request.new_password
-    
-    # Remove the used token
-    del reset_tokens[request.token]
-    
-    return {"message": "Password reset successfully.", "success": True}
-
-@router.get("/reset-password-verify", summary="Verify Reset Token")
-def verify_reset_token(token: str):
-    """Verify if a reset token is valid"""
-    if token not in reset_tokens:
-        raise HTTPException(status_code=400, detail="Invalid reset token.")
-    
-    token_data = reset_tokens[token]
-    
-    # Check if token has expired
-    if datetime.utcnow() > token_data["expires"]:
-        # Remove expired token
-        del reset_tokens[token]
-        raise HTTPException(status_code=400, detail="Reset token has expired.")
-    
-    return {"message": "Token is valid.", "success": True} 
+ 
 
 @router.get("/google-oauth-login", summary="Start Google OAuth2 login for calendar access")
 def google_oauth_login():
