@@ -19,6 +19,12 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         # Determine endpoint for rate limiting
         endpoint = self._get_endpoint_key(request)
         
+        # Skip rate limiting for OPTIONS requests (preflight CORS)
+        if request.method == "OPTIONS":
+            response = await call_next(request)
+            self._add_cors_headers(response, request)
+            return response
+        
         # Check rate limiting
         if rate_limiter.is_rate_limited(request, endpoint):
             # Log rate limit violation
@@ -33,9 +39,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 admin_action=endpoint.startswith("admin_")
             )
             
-            # Return rate limit response
+            # Return rate limit response with CORS headers
             remaining_info = rate_limiter.get_remaining_requests(request, endpoint)
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=429,
                 content={
                     "error": "Rate limit exceeded",
@@ -45,6 +51,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                     "reset_time": remaining_info["reset_time"]
                 }
             )
+            
+            # Add CORS headers to rate limit response
+            self._add_cors_headers(response, request)
+            
+            return response
         
         # Process request
         try:
@@ -56,6 +67,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 status_code=500,
                 content={"error": "Internal server error", "message": str(e)}
             )
+            
+            # Add CORS headers to error response
+            self._add_cors_headers(response, request)
         
         # Calculate response time
         response_time = time.time() - start_time
@@ -116,7 +130,25 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["X-RateLimit-Remaining"] = str(remaining_info["remaining"])
         response.headers["X-RateLimit-Reset"] = str(int(remaining_info["reset_time"]))
         
+        # Add CORS headers to all responses
+        self._add_cors_headers(response, request)
+        
         return response
+    
+    def _add_cors_headers(self, response: Response, request: Request):
+        """Add CORS headers to response"""
+        origin = request.headers.get("Origin")
+        if origin and origin in [
+            "http://localhost:5173",
+            "https://stanleyowarieta.com", 
+            "https://stanley-o.vercel.app",
+            "http://127.0.0.1:5173",
+            "https://portfolio-heart.onrender.com"
+        ]:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
     
     def _get_client_ip(self, request: Request) -> str:
         """Get client IP address"""
@@ -149,6 +181,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             return "admin_login"
         elif path.startswith("/api/auth/change-password"):
             return "admin_change_password"
+        elif path.startswith("/api/analytics") and request.method == "GET":
+            return "admin_analytics"
+        elif path.startswith("/api/experience") or path.startswith("/api/projects") or path.startswith("/api/reviews/admin") or path.startswith("/api/newsletter/admin") or path.startswith("/api/contact/admin") or path.startswith("/api/leads"):
+            return "admin_dashboard"
         elif path.startswith("/api/admin"):
             return "admin_general"
         else:

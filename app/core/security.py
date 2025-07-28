@@ -34,9 +34,12 @@ class RateLimiter:
             # Admin endpoints
             "admin_login": {"requests": 5, "window": 300},           # 5 login attempts per 5 minutes
             "admin_change_password": {"requests": 3, "window": 3600}, # 3 password changes per hour
+            "admin_dashboard": {"requests": 50, "window": 300},      # 50 requests per 5 minutes for dashboard
+            "admin_analytics": {"requests": 30, "window": 300},      # 30 requests per 5 minutes for analytics
+            "admin_general": {"requests": 100, "window": 300},       # 100 requests per 5 minutes for other admin
             
             # General API
-            "api_general": {"requests": 100, "window": 3600},        # 100 requests per hour
+            "api_general": {"requests": 200, "window": 3600},        # 200 requests per hour (increased)
         }
     
     def _get_client_ip(self, request: Request) -> str:
