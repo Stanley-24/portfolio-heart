@@ -22,7 +22,6 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         # Skip rate limiting for OPTIONS requests (preflight CORS)
         if request.method == "OPTIONS":
             response = await call_next(request)
-            self._add_cors_headers(response, request)
             return response
         
         # Check rate limiting
@@ -52,9 +51,6 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 }
             )
             
-            # Add CORS headers to rate limit response
-            self._add_cors_headers(response, request)
-            
             return response
         
         # Process request
@@ -68,8 +64,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 content={"error": "Internal server error", "message": str(e)}
             )
             
-            # Add CORS headers to error response
-            self._add_cors_headers(response, request)
+
         
         # Calculate response time
         response_time = time.time() - start_time
@@ -130,25 +125,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["X-RateLimit-Remaining"] = str(remaining_info["remaining"])
         response.headers["X-RateLimit-Reset"] = str(int(remaining_info["reset_time"]))
         
-        # Add CORS headers to all responses
-        self._add_cors_headers(response, request)
-        
         return response
-    
-    def _add_cors_headers(self, response: Response, request: Request):
-        """Add CORS headers to response"""
-        origin = request.headers.get("Origin")
-        if origin and origin in [
-            "http://localhost:5173",
-            "https://stanleyowarieta.com", 
-            "https://stanley-o.vercel.app",
-            "http://127.0.0.1:5173",
-            "https://portfolio-heart.onrender.com"
-        ]:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "*"
-            response.headers["Access-Control-Allow-Headers"] = "*"
     
     def _get_client_ip(self, request: Request) -> str:
         """Get client IP address"""

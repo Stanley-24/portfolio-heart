@@ -78,7 +78,7 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Add CORS middleware
+# Add CORS middleware (must be first to handle preflight requests)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -93,7 +93,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add security middleware
+# Add security middleware (after CORS to handle rate limiting and security)
 app.add_middleware(SecurityMiddleware)
 
 # Mount static files
