@@ -19,27 +19,27 @@ class RateLimiter:
         self.requests: Dict[str, List[float]] = defaultdict(list)
         self.limits = {
             # Contact endpoints
-            "contact_send_message": {"requests": 5, "window": 300},  # 5 requests per 5 minutes
-            "contact_book_call": {"requests": 3, "window": 300},     # 3 requests per 5 minutes
+            "contact_send_message": {"requests": 20, "window": 300},  # 20 requests per 5 minutes
+            "contact_book_call": {"requests": 10, "window": 300},     # 10 requests per 5 minutes
             
             # Review endpoints
-            "review_create": {"requests": 2, "window": 3600},        # 2 reviews per hour
+            "review_create": {"requests": 10, "window": 3600},        # 10 reviews per hour
             
             # Newsletter endpoints
-            "newsletter_subscribe": {"requests": 3, "window": 3600}, # 3 subscriptions per hour
+            "newsletter_subscribe": {"requests": 15, "window": 3600}, # 15 subscriptions per hour
             
             # Resume endpoints
-            "resume_download": {"requests": 10, "window": 3600},     # 10 downloads per hour
+            "resume_download": {"requests": 50, "window": 3600},      # 50 downloads per hour
             
             # Admin endpoints
-            "admin_login": {"requests": 5, "window": 300},           # 5 login attempts per 5 minutes
-            "admin_change_password": {"requests": 3, "window": 3600}, # 3 password changes per hour
-            "admin_dashboard": {"requests": 50, "window": 300},      # 50 requests per 5 minutes for dashboard
-            "admin_analytics": {"requests": 30, "window": 300},      # 30 requests per 5 minutes for analytics
-            "admin_general": {"requests": 100, "window": 300},       # 100 requests per 5 minutes for other admin
+            "admin_login": {"requests": 20, "window": 300},           # 20 login attempts per 5 minutes
+            "admin_change_password": {"requests": 10, "window": 3600}, # 10 password changes per hour
+            "admin_dashboard": {"requests": 200, "window": 300},      # 200 requests per 5 minutes for dashboard
+            "admin_analytics": {"requests": 100, "window": 300},      # 100 requests per 5 minutes for analytics
+            "admin_general": {"requests": 500, "window": 300},        # 500 requests per 5 minutes for other admin
             
             # General API
-            "api_general": {"requests": 200, "window": 3600},        # 200 requests per hour (increased)
+            "api_general": {"requests": 1000, "window": 3600},        # 1000 requests per hour
         }
     
     def _get_client_ip(self, request: Request) -> str:
@@ -72,6 +72,10 @@ class RateLimiter:
     
     def is_rate_limited(self, request: Request, endpoint: str) -> bool:
         """Check if request should be rate limited"""
+        # Skip rate limiting in development mode
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            return False
+            
         key = self._generate_key(request, endpoint)
         now = time.time()
         

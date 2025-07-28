@@ -11,10 +11,10 @@ router = APIRouter()
 
 @router.post("/track/page-view", summary="Track Page View")
 def track_page_view(
-    page: str,
-    request: Request,
-    referrer: Optional[str] = None,
-    session_id: Optional[str] = None
+    page: str = Query(..., description="Page path to track"),
+    request: Request = None,
+    referrer: Optional[str] = Query(None, description="Referrer URL"),
+    session_id: Optional[str] = Query(None, description="Session ID")
 ):
     """Track a page view with analytics"""
     user_ip = request.client.host if request.client else "unknown"
@@ -32,42 +32,60 @@ def track_page_view(
 
 @router.post("/track/conversion", summary="Track Conversion")
 def track_conversion(
-    conversion_type: str,
-    request: Request,
-    session_id: Optional[str] = None,
-    metadata: Optional[dict] = None
+    conversion_type: str = Query(..., description="Type of conversion"),
+    request: Request = None,
+    session_id: Optional[str] = Query(None, description="Session ID"),
+    metadata: Optional[str] = Query(None, description="JSON string of metadata")
 ):
     """Track a conversion event"""
     user_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("User-Agent", "unknown")
+    
+    # Parse metadata if provided
+    parsed_metadata = None
+    if metadata:
+        try:
+            import json
+            parsed_metadata = json.loads(metadata)
+        except json.JSONDecodeError:
+            parsed_metadata = {"raw_metadata": metadata}
     
     analytics_tracker.track_conversion(
         conversion_type=conversion_type,
         user_ip=user_ip,
         user_agent=user_agent,
         session_id=session_id,
-        metadata=metadata
+        metadata=parsed_metadata
     )
     
     return {"message": "Conversion tracked", "success": True}
 
 @router.post("/track/behavior", summary="Track User Behavior")
 def track_user_behavior(
-    action: str,
-    request: Request,
-    session_id: Optional[str] = None,
-    data: Optional[dict] = None
+    action: str = Query(..., description="Action type"),
+    request: Request = None,
+    session_id: Optional[str] = Query(None, description="Session ID"),
+    data: Optional[str] = Query(None, description="JSON string of additional data")
 ):
     """Track user behavior event"""
     user_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("User-Agent", "unknown")
+    
+    # Parse data if provided
+    parsed_data = None
+    if data:
+        try:
+            import json
+            parsed_data = json.loads(data)
+        except json.JSONDecodeError:
+            parsed_data = {"raw_data": data}
     
     analytics_tracker.track_user_behavior(
         action=action,
         user_ip=user_ip,
         user_agent=user_agent,
         session_id=session_id,
-        data=data
+        data=parsed_data
     )
     
     return {"message": "Behavior tracked", "success": True}

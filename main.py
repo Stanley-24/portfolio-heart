@@ -89,8 +89,8 @@ app.add_middleware(
         "https://portfolio-heart.onrender.com"
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Session-ID"],
 )
 
 # Add security middleware (after CORS to handle rate limiting and security)

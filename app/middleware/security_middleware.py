@@ -133,9 +133,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     
     def _add_cors_headers(self, response: Response):
         """Add CORS headers to response"""
-        response.headers["Access-Control-Allow-Origin"] = "*"
+        # Don't set Access-Control-Allow-Origin here - let FastAPI CORS middleware handle it
+        # Only add additional headers if needed
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, X-Session-ID"
         response.headers["Access-Control-Allow-Credentials"] = "true"
     
     def _get_client_ip(self, request: Request) -> str:
