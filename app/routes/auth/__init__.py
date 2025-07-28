@@ -160,7 +160,10 @@ def reset_admin():
     global ADMIN_EMAIL
     ADMIN_EMAIL = "owarieta24@gmail.com"
     global_admin_password["value"] = "admin123"
-    return {"message": "Admin credentials reset.", "success": True}
+    print(f"[RESET DEBUG] Admin credentials reset to default")
+    print(f"[RESET DEBUG] - Email: {ADMIN_EMAIL}")
+    print(f"[RESET DEBUG] - Password: {global_admin_password['value']}")
+    return {"message": "Admin credentials reset to default (admin123).", "success": True}
 
 @router.post("/reset-password-confirm", summary="Confirm Password Reset")
 def reset_password_confirm(request: ResetPasswordConfirmRequest):
