@@ -51,6 +51,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 }
             )
             
+            # Add CORS headers to rate limit response
+            self._add_cors_headers(response)
             return response
         
         # Process request
@@ -63,7 +65,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 status_code=500,
                 content={"error": "Internal server error", "message": str(e)}
             )
-            
+            # Add CORS headers to error response
+            self._add_cors_headers(response)
+            return response
 
         
         # Calculate response time
@@ -126,6 +130,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["X-RateLimit-Reset"] = str(int(remaining_info["reset_time"]))
         
         return response
+    
+    def _add_cors_headers(self, response: Response):
+        """Add CORS headers to response"""
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
     
     def _get_client_ip(self, request: Request) -> str:
         """Get client IP address"""
