@@ -78,11 +78,51 @@ def change_password(
     new_password: str = Body(...),
     admin=Depends(get_current_admin)
 ):
+    print(f"[CHANGE DEBUG] Password change attempt")
+    print(f"[CHANGE DEBUG] - Old password match: {old_password == global_admin_password['value']}")
+    print(f"[CHANGE DEBUG] - New password length: {len(new_password) if new_password else 0}")
+    
     if old_password != global_admin_password["value"]:
+        print(f"[CHANGE DEBUG] ❌ Old password incorrect")
         raise HTTPException(status_code=400, detail="Old password is incorrect.")
     if not new_password or len(new_password) < 6:
+        print(f"[CHANGE DEBUG] ❌ New password too short")
         raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
+    
     global_admin_password["value"] = new_password
+    print(f"[CHANGE DEBUG] ✅ Password changed successfully")
+    return {"message": "Password changed successfully.", "success": True}
+
+@router.post("/quick-change-password", summary="Quick Change Admin Password (No Auth Required)")
+def quick_change_password(
+    email: str = Body(...),
+    new_password: str = Body(...),
+    secret_key: str = Body(...)
+):
+    """Quick password change for admin (requires secret key)"""
+    print(f"[QUICK CHANGE DEBUG] Quick password change attempt")
+    print(f"[QUICK CHANGE DEBUG] - Email: {email}")
+    print(f"[QUICK CHANGE DEBUG] - New password length: {len(new_password) if new_password else 0}")
+    
+    # Verify email matches admin
+    if email.lower() != ADMIN_EMAIL.lower():
+        print(f"[QUICK CHANGE DEBUG] ❌ Email mismatch")
+        raise HTTPException(status_code=400, detail="Invalid email address.")
+    
+    # Verify secret key (you can change this to any secret you want)
+    expected_secret = "stanley_admin_2024"
+    if secret_key != expected_secret:
+        print(f"[QUICK CHANGE DEBUG] ❌ Invalid secret key")
+        raise HTTPException(status_code=400, detail="Invalid secret key.")
+    
+    # Validate new password
+    if not new_password or len(new_password) < 6:
+        print(f"[QUICK CHANGE DEBUG] ❌ Password too short")
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
+    
+    # Update password
+    global_admin_password["value"] = new_password
+    print(f"[QUICK CHANGE DEBUG] ✅ Password changed successfully")
     return {"message": "Password changed successfully.", "success": True}
 
 @router.post("/create-admin", summary="Create Admin Account")
@@ -164,6 +204,25 @@ def reset_admin():
     print(f"[RESET DEBUG] - Email: {ADMIN_EMAIL}")
     print(f"[RESET DEBUG] - Password: {global_admin_password['value']}")
     return {"message": "Admin credentials reset to default (admin123).", "success": True}
+
+@router.post("/forgot-password", summary="Forgot Password - Reset to Default")
+def forgot_password(email: str = Body(...)):
+    """Reset password to default when email is slow"""
+    print(f"[FORGOT DEBUG] Forgot password request for: {email}")
+    
+    if email.lower() != ADMIN_EMAIL.lower():
+        print(f"[FORGOT DEBUG] ❌ Email mismatch")
+        return {"message": "If the email exists, password has been reset to default.", "success": True}
+    
+    # Reset to default password
+    global_admin_password["value"] = "admin123"
+    print(f"[FORGOT DEBUG] ✅ Password reset to default: admin123")
+    
+    return {
+        "message": "Password has been reset to default (admin123). Please login and change it immediately.", 
+        "success": True,
+        "default_password": "admin123"
+    }
 
 @router.post("/reset-password-confirm", summary="Confirm Password Reset")
 def reset_password_confirm(request: ResetPasswordConfirmRequest):
