@@ -18,3 +18,4 @@ google-auth-oauthlib==1.1.0
 google-auth-httplib2==0.1.1
 google-api-python-client==2.108.0
 geoip2==5.1.0
+email-validator==2.1.0
