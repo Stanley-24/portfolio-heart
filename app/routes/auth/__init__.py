@@ -44,8 +44,19 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 @router.post("/login", summary="Admin Login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    print(f"[LOGIN DEBUG] Login attempt:")
+    print(f"[LOGIN DEBUG] - Username: {form_data.username}")
+    print(f"[LOGIN DEBUG] - Password length: {len(form_data.password) if form_data.password else 0}")
+    print(f"[LOGIN DEBUG] - ADMIN_EMAIL: {ADMIN_EMAIL}")
+    print(f"[LOGIN DEBUG] - Current stored password: {global_admin_password['value']}")
+    print(f"[LOGIN DEBUG] - Email match: {form_data.username.lower() == ADMIN_EMAIL.lower()}")
+    print(f"[LOGIN DEBUG] - Password match: {form_data.password == global_admin_password['value']}")
+    
     if form_data.username.lower() != ADMIN_EMAIL.lower() or form_data.password != global_admin_password["value"]:
+        print(f"[LOGIN DEBUG] ❌ Login failed - credentials mismatch")
         raise HTTPException(status_code=401, detail="Incorrect email or password")
+    
+    print(f"[LOGIN DEBUG] ✅ Login successful")
     access_token = create_access_token({"sub": ADMIN_EMAIL, "role": "admin"})
     return {"access_token": access_token, "token_type": "bearer", "success": True}
 
