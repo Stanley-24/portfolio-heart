@@ -17,6 +17,10 @@ def track_page_view(
     session_id: Optional[str] = Query(None, description="Session ID")
 ):
     """Track a page view with analytics"""
+    # Skip tracking admin routes
+    if page.startswith("/admin"):
+        return {"message": "Admin route skipped", "success": True}
+    
     user_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("User-Agent", "unknown")
     
@@ -68,6 +72,10 @@ def track_user_behavior(
     data: Optional[str] = Query(None, description="JSON string of additional data")
 ):
     """Track user behavior event"""
+    # Skip tracking admin-related behavior
+    if action.startswith("admin_") or "admin" in action.lower():
+        return {"message": "Admin behavior skipped", "success": True}
+    
     user_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("User-Agent", "unknown")
     

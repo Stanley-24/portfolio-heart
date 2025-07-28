@@ -241,14 +241,22 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     
     def _is_frontend_route(self, path: str) -> bool:
         """Check if this is a frontend route that should be tracked"""
+        # Skip admin routes - only track main website pages
+        if path.startswith("/admin"):
+            return False
+            
         frontend_routes = [
             "/", "/about", "/projects", "/experience", "/contact", 
-            "/resume", "/admin", "/admin/login"
+            "/resume"
         ]
-        return path in frontend_routes or path.startswith("/admin/")
+        return path in frontend_routes
     
     def _is_user_action(self, path: str, method: str) -> bool:
         """Check if this is a user action that should be tracked"""
+        # Skip admin-related actions - only track main website user actions
+        if path.startswith("/api/admin") or path.startswith("/api/auth"):
+            return False
+            
         user_actions = [
             ("/api/contact/send-message", "POST"),
             ("/api/contact/book-call", "POST"),
