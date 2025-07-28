@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from app.models.contact import Lead
 from app.core.database import get_db
+from app.core.analytics import analytics_tracker
 from app.services.email_service import send_admin_lead_notification
 from sqlalchemy.orm import Session
 import os
@@ -17,6 +18,19 @@ def create_lead(name: str, email: str, interest: str = None, message: str = None
     db.add(lead)
     db.commit()
     db.refresh(lead)
+    
+    # Track conversion for analytics
+    analytics_tracker.track_conversion(
+        conversion_type="lead_generation",
+        user_ip="unknown",  # Will be set by middleware
+        user_agent="unknown",  # Will be set by middleware
+        metadata={
+            "name": name,
+            "email": email,
+            "interest": interest,
+            "has_message": bool(message)
+        }
+    )
     
     # Send admin notification
     try:

@@ -3,6 +3,7 @@ from typing import List
 from app.schemas.newsletter import Newsletter, NewsletterCreate, NewsletterUpdate
 from app.models.newsletter import NewsletterSubscriber
 from app.core.database import get_db
+from app.core.analytics import analytics_tracker
 from app.services.email_service import send_admin_newsletter_notification
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -36,6 +37,17 @@ def subscribe_newsletter(data: NewsletterCreate, db: Session = Depends(get_db)):
     
     # Get total subscriber count for admin notification
     total_subscribers = db.query(NewsletterSubscriber).count()
+    
+    # Track conversion for analytics
+    analytics_tracker.track_conversion(
+        conversion_type="newsletter_signup",
+        user_ip="unknown",  # Will be set by middleware
+        user_agent="unknown",  # Will be set by middleware
+        metadata={
+            "email": data.email,
+            "total_subscribers": total_subscribers
+        }
+    )
     
     # Send welcome email to client
     send_newsletter_welcome_email(data.email)

@@ -3,6 +3,7 @@ from typing import List
 from app.schemas.contact import ContactMessageCreate, ContactMessageOut
 from app.models.contact import ContactMessage as ContactMessageModel
 from app.core.database import get_db
+from app.core.analytics import analytics_tracker
 from sqlalchemy.orm import Session
 from datetime import datetime
 from app.routes.auth import get_current_admin
@@ -34,6 +35,19 @@ def send_contact_message(data: ContactMessageCreate, db: Session = Depends(get_d
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
+    
+    # Track conversion for analytics
+    analytics_tracker.track_conversion(
+        conversion_type="contact_message",
+        user_ip="unknown",  # Will be set by middleware
+        user_agent="unknown",  # Will be set by middleware
+        metadata={
+            "name": data.name,
+            "email": data.email,
+            "subject": data.subject,
+            "company": data.company
+        }
+    )
     
     # Send admin notification
     try:
@@ -71,6 +85,19 @@ def book_call(data: ContactMessageCreate, db: Session = Depends(get_db)):
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
+    
+    # Track conversion for analytics
+    analytics_tracker.track_conversion(
+        conversion_type="call_booking",
+        user_ip="unknown",  # Will be set by middleware
+        user_agent="unknown",  # Will be set by middleware
+        metadata={
+            "name": data.name,
+            "email": data.email,
+            "company": data.company,
+            "phone": data.phone
+        }
+    )
     
     # Send admin notification
     try:

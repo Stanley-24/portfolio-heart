@@ -3,6 +3,7 @@ from typing import List
 from app.schemas.review import Review as ReviewSchema, ReviewCreate, ReviewUpdate
 from app.models.review import Review
 from app.core.database import get_db
+from app.core.analytics import analytics_tracker
 from app.services.email_service import send_admin_review_notification
 from sqlalchemy.orm import Session
 from app.routes.auth import get_current_admin
@@ -60,6 +61,18 @@ def create_review(data: ReviewCreate, db: Session = Depends(get_db)):
     db.add(new_review)
     db.commit()
     db.refresh(new_review)
+    
+    # Track conversion for analytics
+    analytics_tracker.track_conversion(
+        conversion_type="review_submit",
+        user_ip="unknown",  # Will be set by middleware
+        user_agent="unknown",  # Will be set by middleware
+        metadata={
+            "client_name": data.client_name,
+            "rating": data.rating,
+            "has_comment": bool(data.review_text)
+        }
+    )
     
     # Send admin notification
     try:
