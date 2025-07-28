@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
     
     OPENAI_API_KEY: str = ""
+    GOOGLE_SERVICE_ACCOUNT_JSON: Optional[str] = None
+    PYTHON_VERSION: Optional[str] = None
     
     # Google Calendar & OAuth
     GOOGLE_CALENDAR_ID: Optional[str] = None
@@ -76,4 +78,3 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Create upload directory if it doesn't exist
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True) 
