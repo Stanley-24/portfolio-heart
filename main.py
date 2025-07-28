@@ -12,6 +12,8 @@ from app.routes import resume, experience, projects, reviews, newsletter, contac
 from app.routes.email import email
 from app.routes.chatbot import chatbot
 from app.routes.leads import leads
+from app.routes.admin import security
+from app.middleware.security_middleware import SecurityMiddleware
 from sqlalchemy import create_engine
 from app.core.database import Base
 import app.models.experience
@@ -91,6 +93,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add security middleware
+app.add_middleware(SecurityMiddleware)
+
 # Mount static files
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
@@ -106,6 +111,7 @@ app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["aut
 app.include_router(email.router, prefix="/api/email", tags=["email"])
 app.include_router(chatbot.router, prefix="/api/chatbot", tags=["chatbot"])
 app.include_router(leads.router, prefix="/api", tags=["leads"])
+app.include_router(security.router, prefix="/api/security", tags=["security"])
 
 @app.get("/")
 async def root():

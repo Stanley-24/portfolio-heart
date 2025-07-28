@@ -6,11 +6,18 @@ from app.core.database import get_db
 from sqlalchemy.orm import Session
 from datetime import datetime
 from app.routes.auth import get_current_admin
+from app.services.email_service import (
+    send_admin_contact_notification,
+    send_admin_booking_notification,
+    send_contact_message_with_zoho,
+    send_booking_confirmation_with_zoho
+)
 import os
-import smtplib
-from email.message import EmailMessage
 
 router = APIRouter()
+
+# Admin email configuration
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "owarieta24@gmail.com")
 
 @router.post("/send-message", summary="Send Contact Message")
 def send_contact_message(data: ContactMessageCreate, db: Session = Depends(get_db)):
@@ -28,11 +35,24 @@ def send_contact_message(data: ContactMessageCreate, db: Session = Depends(get_d
     db.commit()
     db.refresh(db_message)
     
-    # Send email notification to owner
-    send_contact_notification(data)
+    # Send admin notification
+    try:
+        send_admin_contact_notification(ADMIN_EMAIL, {
+            'name': data.name,
+            'email': data.email,
+            'subject': data.subject,
+            'message': data.message,
+            'phone': data.phone,
+            'company': data.company
+        })
+    except Exception as e:
+        print(f"Failed to send admin notification: {e}")
     
     # Send confirmation email to sender
-    send_contact_confirmation(data)
+    try:
+        send_contact_message_with_zoho(data.name, data.email, data.message, data.subject)
+    except Exception as e:
+        print(f"Failed to send confirmation email: {e}")
     
     return {"message": "Message sent successfully", "success": True}
 
@@ -52,11 +72,31 @@ def book_call(data: ContactMessageCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_message)
     
-    # Send call booking notification to owner
-    send_call_booking_notification(data)
+    # Send admin notification
+    try:
+        send_admin_booking_notification(ADMIN_EMAIL, {
+            'name': data.name,
+            'email': data.email,
+            'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'provider': 'Google Meet',
+            'message': data.message
+        })
+    except Exception as e:
+        print(f"Failed to send admin notification: {e}")
     
     # Send confirmation email to sender
-    send_call_booking_confirmation(data)
+    try:
+        send_booking_confirmation_with_zoho(
+            data.name, 
+            data.email, 
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'Google Meet',
+            'https://meet.google.com/xxx-xxxx-xxx',
+            ADMIN_EMAIL,
+            data.message
+        )
+    except Exception as e:
+        print(f"Failed to send confirmation email: {e}")
     
     return {"message": "Call booking request sent successfully", "success": True}
 
@@ -92,156 +132,4 @@ def mark_as_read(message_id: int, db: Session = Depends(get_db), admin=Depends(g
     message.is_read = True
     message.read_at = datetime.utcnow()
     db.commit()
-    return {"message": "Message marked as read", "success": True}
-
-# Email sending helpers
-def send_contact_notification(data: ContactMessageCreate):
-    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
-    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
-    smtp_user = os.getenv("ZOHO_SMTP_USER")
-    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
-    from_email = os.getenv("EMAIL_FROM")
-    owner_email = from_email
-    
-    subject = f"New Contact Message: {data.subject}"
-    html_content = f"""
-    <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>
-      <div style='max-width:520px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px #e3e8f0;padding:32px;'>
-        <h2 style='color:#2563eb;margin-bottom:8px;'>New Contact Message</h2>
-        <div style='background:#f8f9fa;border-radius:6px;padding:16px;margin:16px 0;'>
-          <p><strong>From:</strong> {data.name}</p>
-          <p><strong>Email:</strong> {data.email}</p>
-          <p><strong>Subject:</strong> {data.subject}</p>
-          {data.phone and f'<p><strong>Phone:</strong> {data.phone}</p>' or ''}
-          {data.company and f'<p><strong>Company:</strong> {data.company}</p>' or ''}
-        </div>
-        <div style='background:#f1f5f9;border-radius:6px;padding:16px;margin:16px 0;'>
-          <p><strong>Message:</strong></p>
-          <p style='white-space:pre-wrap;'>{data.message}</p>
-        </div>
-      </div>
-    </body></html>
-    """
-    
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = from_email
-    msg['To'] = owner_email
-    msg.set_content(f"New contact message from {data.name}: {data.message}")
-    msg.add_alternative(html_content, subtype='html')
-    
-    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
-        smtp.login(smtp_user, smtp_pass)
-        smtp.send_message(msg)
-
-def send_contact_confirmation(data: ContactMessageCreate):
-    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
-    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
-    smtp_user = os.getenv("ZOHO_SMTP_USER")
-    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
-    from_email = os.getenv("EMAIL_FROM")
-    
-    subject = "Thank you for your message!"
-    html_content = f"""
-    <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>
-      <div style='max-width:520px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px #e3e8f0;padding:32px;'>
-        <h2 style='color:#2563eb;margin-bottom:8px;'>Thank you for your message!</h2>
-        <p style='font-size:1.1em;color:#222;'>Hi {data.name},</p>
-        <p style='font-size:1.1em;color:#222;'>Thank you for reaching out! I've received your message and will get back to you as soon as possible.</p>
-        <div style='background:#f1f5f9;border-radius:6px;padding:16px;margin:24px 0;'>
-          <p style='margin:0;'><strong>Your message:</strong></p>
-          <p style='white-space:pre-wrap;margin:8px 0 0 0;'>{data.message}</p>
-        </div>
-        <p style='margin-top:2em;font-size:1em;color:#444;'>
-          Best regards,<br/>
-          <span style='color:#2563eb;font-weight:bold;'>Stanley Owarieta</span>
-        </p>
-      </div>
-    </body></html>
-    """
-    
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = from_email
-    msg['To'] = data.email
-    msg.set_content(f"Thank you for your message, {data.name}! I'll get back to you soon.")
-    msg.add_alternative(html_content, subtype='html')
-    
-    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
-        smtp.login(smtp_user, smtp_pass)
-        smtp.send_message(msg)
-
-def send_call_booking_notification(data: ContactMessageCreate):
-    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
-    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
-    smtp_user = os.getenv("ZOHO_SMTP_USER")
-    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
-    from_email = os.getenv("EMAIL_FROM")
-    owner_email = from_email
-    
-    subject = f"New Call Booking Request from {data.name}"
-    html_content = f"""
-    <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>
-      <div style='max-width:520px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px #e3e8f0;padding:32px;'>
-        <h2 style='color:#2563eb;margin-bottom:8px;'>New Call Booking Request</h2>
-        <div style='background:#f8f9fa;border-radius:6px;padding:16px;margin:16px 0;'>
-          <p><strong>From:</strong> {data.name}</p>
-          <p><strong>Email:</strong> {data.email}</p>
-          {data.phone and f'<p><strong>Phone:</strong> {data.phone}</p>' or ''}
-          {data.company and f'<p><strong>Company:</strong> {data.company}</p>' or ''}
-        </div>
-        <div style='background:#f1f5f9;border-radius:6px;padding:16px;margin:16px 0;'>
-          <p><strong>Message:</strong></p>
-          <p style='white-space:pre-wrap;'>{data.message}</p>
-        </div>
-      </div>
-    </body></html>
-    """
-    
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = from_email
-    msg['To'] = owner_email
-    msg.set_content(f"New call booking request from {data.name}: {data.message}")
-    msg.add_alternative(html_content, subtype='html')
-    
-    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
-        smtp.login(smtp_user, smtp_pass)
-        smtp.send_message(msg)
-
-def send_call_booking_confirmation(data: ContactMessageCreate):
-    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
-    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
-    smtp_user = os.getenv("ZOHO_SMTP_USER")
-    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
-    from_email = os.getenv("EMAIL_FROM")
-    
-    subject = "Call Booking Request Received!"
-    html_content = f"""
-    <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>
-      <div style='max-width:520px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px #e3e8f0;padding:32px;'>
-        <h2 style='color:#2563eb;margin-bottom:8px;'>Call Booking Request Received!</h2>
-        <p style='font-size:1.1em;color:#222;'>Hi {data.name},</p>
-        <p style='font-size:1.1em;color:#222;'>Thank you for your call booking request! I've received your message and will contact you soon to schedule our call.</p>
-        <div style='background:#f1f5f9;border-radius:6px;padding:16px;margin:24px 0;'>
-          <p style='margin:0;'><strong>Your request:</strong></p>
-          <p style='white-space:pre-wrap;margin:8px 0 0 0;'>{data.message}</p>
-        </div>
-        <p style='margin-top:2em;font-size:1em;color:#444;'>
-          Best regards,<br/>
-          <span style='color:#2563eb;font-weight:bold;'>Stanley Owarieta</span>
-        </p>
-      </div>
-    </body></html>
-    """
-    
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = from_email
-    msg['To'] = data.email
-    msg.set_content(f"Thank you for your call booking request, {data.name}! I'll contact you soon to schedule our call.")
-    msg.add_alternative(html_content, subtype='html')
-    
-    with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
-        smtp.login(smtp_user, smtp_pass)
-        smtp.send_message(msg) 
+    return {"message": "Message marked as read", "success": True} 

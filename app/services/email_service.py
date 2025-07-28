@@ -1,6 +1,7 @@
 import os
 import smtplib
 from email.message import EmailMessage
+from datetime import datetime
 
 def send_resume_with_zoho(to_email, resume_path):
     smtp_server = os.getenv("ZOHO_SMTP_SERVER")
@@ -339,3 +340,342 @@ Stanley Owarieta Portfolio Admin
     with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
         smtp.login(smtp_user, smtp_pass)
         smtp.send_message(msg) 
+
+# Admin Notification Functions
+def send_admin_contact_notification(admin_email, contact_data):
+    """Send notification to admin when someone sends a contact message"""
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+
+    if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
+        raise Exception("SMTP credentials are not fully set in environment variables.")
+
+    msg = EmailMessage()
+    msg['Subject'] = f"🔔 New Contact Message from {contact_data['name']}"
+    msg['From'] = from_email
+    msg['To'] = admin_email
+
+    # Plain text version
+    msg.set_content(f"""\
+New Contact Message Received
+
+Name: {contact_data['name']}
+Email: {contact_data['email']}
+Subject: {contact_data.get('subject', 'No subject')}
+Message: {contact_data['message']}
+
+Received at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Please respond to this inquiry promptly.
+""")
+
+    # HTML version
+    msg.add_alternative(f"""
+    <html>
+      <body style='font-family: Inter, Roboto, Arial, sans-serif; background: #f9f9fb; color: #23272f; padding: 0.5em;'>
+        <div style='max-width: 600px; margin: 1.5em auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(102,126,234,0.08); border: 1px solid #e5e7eb; padding: 1.5em;'>
+          <div style='background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;'>
+            <h2 style='margin: 0; font-size: 1.3rem;'>🔔 New Contact Message</h2>
+          </div>
+          
+          <div style='margin-bottom: 1.5rem;'>
+            <h3 style='color: #667eea; margin-bottom: 1rem;'>Contact Details</h3>
+            <p><strong>Name:</strong> {contact_data['name']}</p>
+            <p><strong>Email:</strong> <a href='mailto:{contact_data['email']}' style='color: #667eea;'>{contact_data['email']}</a></p>
+            <p><strong>Subject:</strong> {contact_data.get('subject', 'No subject')}</p>
+            <p><strong>Received:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+          </div>
+          
+          <div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #667eea;'>
+            <h4 style='margin-top: 0; color: #667eea;'>Message:</h4>
+            <p style='white-space: pre-wrap; margin: 0;'>{contact_data['message']}</p>
+          </div>
+          
+          <div style='margin-top: 1.5rem; text-align: center;'>
+            <a href='mailto:{contact_data['email']}' style='background: #667eea; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 8px; display: inline-block;'>Reply to {contact_data['name']}</a>
+          </div>
+        </div>
+      </body>
+    </html>
+    """, subtype='html')
+
+    try:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_pass)
+            smtp.send_message(msg)
+            print(f"[ADMIN NOTIFICATION] Contact notification sent to admin")
+    except Exception as e:
+        print(f"[ADMIN NOTIFICATION] Error sending contact notification: {e}")
+        raise
+
+def send_admin_booking_notification(admin_email, booking_data):
+    """Send notification to admin when someone books a call"""
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+
+    if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
+        raise Exception("SMTP credentials are not fully set in environment variables.")
+
+    msg = EmailMessage()
+    msg['Subject'] = f"📅 New Call Booking from {booking_data['name']}"
+    msg['From'] = from_email
+    msg['To'] = admin_email
+
+    # Plain text version
+    msg.set_content(f"""\
+New Call Booking Request
+
+Name: {booking_data['name']}
+Email: {booking_data['email']}
+Date & Time: {booking_data['datetime']}
+Provider: {booking_data.get('provider', 'Not specified')}
+Message: {booking_data.get('message', 'No additional message')}
+
+Received at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Please schedule this call and send confirmation to the client.
+""")
+
+    # HTML version
+    msg.add_alternative(f"""
+    <html>
+      <body style='font-family: Inter, Roboto, Arial, sans-serif; background: #f9f9fb; color: #23272f; padding: 0.5em;'>
+        <div style='max-width: 600px; margin: 1.5em auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(102,126,234,0.08); border: 1px solid #e5e7eb; padding: 1.5em;'>
+          <div style='background: linear-gradient(135deg, #43e97b, #38f9d7); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;'>
+            <h2 style='margin: 0; font-size: 1.3rem;'>📅 New Call Booking</h2>
+          </div>
+          
+          <div style='margin-bottom: 1.5rem;'>
+            <h3 style='color: #667eea; margin-bottom: 1rem;'>Booking Details</h3>
+            <p><strong>Name:</strong> {booking_data['name']}</p>
+            <p><strong>Email:</strong> <a href='mailto:{booking_data['email']}' style='color: #667eea;'>{booking_data['email']}</a></p>
+            <p><strong>Date & Time:</strong> {booking_data['datetime']}</p>
+            <p><strong>Provider:</strong> {booking_data.get('provider', 'Not specified')}</p>
+            <p><strong>Received:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+          </div>
+          
+          {f"<div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #43e97b; margin-bottom: 1.5rem;'><h4 style='margin-top: 0; color: #43e97b;'>Client Message:</h4><p style='white-space: pre-wrap; margin: 0;'>{booking_data.get('message', 'No additional message')}</p></div>" if booking_data.get('message') else ""}
+          
+          <div style='margin-top: 1.5rem; text-align: center;'>
+            <a href='mailto:{booking_data['email']}' style='background: #43e97b; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 8px; display: inline-block; margin-right: 1rem;'>Reply to {booking_data['name']}</a>
+            <a href='https://calendar.google.com' target='_blank' style='background: #667eea; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 8px; display: inline-block;'>Open Calendar</a>
+          </div>
+        </div>
+      </body>
+    </html>
+    """, subtype='html')
+
+    try:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_pass)
+            smtp.send_message(msg)
+            print(f"[ADMIN NOTIFICATION] Booking notification sent to admin")
+    except Exception as e:
+        print(f"[ADMIN NOTIFICATION] Error sending booking notification: {e}")
+        raise
+
+def send_admin_review_notification(admin_email, review_data):
+    """Send notification to admin when someone leaves a review"""
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+
+    if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
+        raise Exception("SMTP credentials are not fully set in environment variables.")
+
+    msg = EmailMessage()
+    msg['Subject'] = f"⭐ New Review from {review_data['client_name']} ({review_data['rating']} stars)"
+    msg['From'] = from_email
+    msg['To'] = admin_email
+
+    # Create star rating display
+    stars = "⭐" * review_data['rating'] + "☆" * (5 - review_data['rating'])
+
+    # Plain text version
+    msg.set_content(f"""\
+New Review Received
+
+Client: {review_data['client_name']}
+Rating: {stars} ({review_data['rating']}/5)
+Comment: {review_data.get('comment', 'No comment provided')}
+Email: {review_data.get('client_email', 'No email provided')}
+
+Received at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Review is currently pending approval.
+""")
+
+    # HTML version
+    msg.add_alternative(f"""
+    <html>
+      <body style='font-family: Inter, Roboto, Arial, sans-serif; background: #f9f9fb; color: #23272f; padding: 0.5em;'>
+        <div style='max-width: 600px; margin: 1.5em auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(102,126,234,0.08); border: 1px solid #e5e7eb; padding: 1.5em;'>
+          <div style='background: linear-gradient(135deg, #ffd93d, #ff6b6b); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;'>
+            <h2 style='margin: 0; font-size: 1.3rem;'>⭐ New Review</h2>
+          </div>
+          
+          <div style='margin-bottom: 1.5rem;'>
+            <h3 style='color: #667eea; margin-bottom: 1rem;'>Review Details</h3>
+            <p><strong>Client:</strong> {review_data['client_name']}</p>
+            <p><strong>Rating:</strong> <span style='font-size: 1.2rem;'>{stars}</span> ({review_data['rating']}/5)</p>
+            <p><strong>Email:</strong> {review_data.get('client_email', 'No email provided')}</p>
+            <p><strong>Received:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+          </div>
+          
+          {f"<div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #ffd93d; margin-bottom: 1.5rem;'><h4 style='margin-top: 0; color: #ffd93d;'>Comment:</h4><p style='white-space: pre-wrap; margin: 0; font-style: italic;'>{review_data.get('comment', 'No comment provided')}</p></div>" if review_data.get('comment') else ""}
+          
+          <div style='background: #fff3cd; border: 1px solid #ffeaa7; padding: 1rem; border-radius: 8px; margin-top: 1.5rem;'>
+            <p style='margin: 0; color: #856404;'><strong>Note:</strong> This review is currently pending approval in the admin dashboard.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+    """, subtype='html')
+
+    try:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_pass)
+            smtp.send_message(msg)
+            print(f"[ADMIN NOTIFICATION] Review notification sent to admin")
+    except Exception as e:
+        print(f"[ADMIN NOTIFICATION] Error sending review notification: {e}")
+        raise
+
+def send_admin_lead_notification(admin_email, lead_data):
+    """Send notification to admin when someone becomes a lead"""
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+
+    if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
+        raise Exception("SMTP credentials are not fully set in environment variables.")
+
+    msg = EmailMessage()
+    msg['Subject'] = f"🎯 New Lead: {lead_data['name']} from {lead_data.get('company', 'Unknown Company')}"
+    msg['From'] = from_email
+    msg['To'] = admin_email
+
+    # Plain text version
+    msg.set_content(f"""\
+New Lead Generated
+
+Name: {lead_data['name']}
+Email: {lead_data['email']}
+Company: {lead_data.get('company', 'Not specified')}
+Phone: {lead_data.get('phone', 'Not provided')}
+Source: {lead_data.get('source', 'Not specified')}
+Message: {lead_data.get('message', 'No message provided')}
+
+Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+This is a potential business opportunity - follow up promptly!
+""")
+
+    # HTML version
+    msg.add_alternative(f"""
+    <html>
+      <body style='font-family: Inter, Roboto, Arial, sans-serif; background: #f9f9fb; color: #23272f; padding: 0.5em;'>
+        <div style='max-width: 600px; margin: 1.5em auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(102,126,234,0.08); border: 1px solid #e5e7eb; padding: 1.5em;'>
+          <div style='background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;'>
+            <h2 style='margin: 0; font-size: 1.3rem;'>🎯 New Lead</h2>
+          </div>
+          
+          <div style='margin-bottom: 1.5rem;'>
+            <h3 style='color: #667eea; margin-bottom: 1rem;'>Lead Details</h3>
+            <p><strong>Name:</strong> {lead_data['name']}</p>
+            <p><strong>Email:</strong> <a href='mailto:{lead_data['email']}' style='color: #667eea;'>{lead_data['email']}</a></p>
+            <p><strong>Company:</strong> {lead_data.get('company', 'Not specified')}</p>
+            <p><strong>Phone:</strong> {lead_data.get('phone', 'Not provided')}</p>
+            <p><strong>Source:</strong> {lead_data.get('source', 'Not specified')}</p>
+            <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+          </div>
+          
+          {f"<div style='background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #ff6b6b; margin-bottom: 1.5rem;'><h4 style='margin-top: 0; color: #ff6b6b;'>Message:</h4><p style='white-space: pre-wrap; margin: 0;'>{lead_data.get('message', 'No message provided')}</p></div>" if lead_data.get('message') else ""}
+          
+          <div style='margin-top: 1.5rem; text-align: center;'>
+            <a href='mailto:{lead_data['email']}' style='background: #ff6b6b; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 8px; display: inline-block;'>Contact {lead_data['name']}</a>
+          </div>
+        </div>
+      </body>
+    </html>
+    """, subtype='html')
+
+    try:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_pass)
+            smtp.send_message(msg)
+            print(f"[ADMIN NOTIFICATION] Lead notification sent to admin")
+    except Exception as e:
+        print(f"[ADMIN NOTIFICATION] Error sending lead notification: {e}")
+        raise
+
+def send_admin_newsletter_notification(admin_email, subscriber_data):
+    """Send notification to admin when someone subscribes to newsletter"""
+    smtp_server = os.getenv("ZOHO_SMTP_SERVER")
+    smtp_port = int(os.getenv("ZOHO_SMTP_PORT", 465))
+    smtp_user = os.getenv("ZOHO_SMTP_USER")
+    smtp_pass = os.getenv("ZOHO_SMTP_PASS")
+    from_email = os.getenv("EMAIL_FROM")
+
+    if not all([smtp_server, smtp_port, smtp_user, smtp_pass, from_email]):
+        raise Exception("SMTP credentials are not fully set in environment variables.")
+
+    msg = EmailMessage()
+    msg['Subject'] = f"📧 New Newsletter Subscriber: {subscriber_data['email']}"
+    msg['From'] = from_email
+    msg['To'] = admin_email
+
+    # Plain text version
+    msg.set_content(f"""\
+New Newsletter Subscription
+
+Email: {subscriber_data['email']}
+Subscribed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Total subscribers: {subscriber_data.get('total_subscribers', 'Unknown')}
+
+This person is interested in your content and updates.
+""")
+
+    # HTML version
+    msg.add_alternative(f"""
+    <html>
+      <body style='font-family: Inter, Roboto, Arial, sans-serif; background: #f9f9fb; color: #23272f; padding: 0.5em;'>
+        <div style='max-width: 600px; margin: 1.5em auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(102,126,234,0.08); border: 1px solid #e5e7eb; padding: 1.5em;'>
+          <div style='background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;'>
+            <h2 style='margin: 0; font-size: 1.3rem;'>📧 New Newsletter Subscriber</h2>
+          </div>
+          
+          <div style='margin-bottom: 1.5rem;'>
+            <h3 style='color: #667eea; margin-bottom: 1rem;'>Subscription Details</h3>
+            <p><strong>Email:</strong> <a href='mailto:{subscriber_data['email']}' style='color: #667eea;'>{subscriber_data['email']}</a></p>
+            <p><strong>Subscribed:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            <p><strong>Total Subscribers:</strong> {subscriber_data.get('total_subscribers', 'Unknown')}</p>
+          </div>
+          
+          <div style='background: #e3f2fd; border: 1px solid #bbdefb; padding: 1rem; border-radius: 8px; margin-top: 1.5rem;'>
+            <p style='margin: 0; color: #1976d2;'>🎉 This person is interested in your content and updates!</p>
+          </div>
+        </div>
+      </body>
+    </html>
+    """, subtype='html')
+
+    try:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_pass)
+            smtp.send_message(msg)
+            print(f"[ADMIN NOTIFICATION] Newsletter notification sent to admin")
+    except Exception as e:
+        print(f"[ADMIN NOTIFICATION] Error sending newsletter notification: {e}")
+        raise 

@@ -3,6 +3,7 @@ from typing import List
 from app.schemas.newsletter import Newsletter, NewsletterCreate, NewsletterUpdate
 from app.models.newsletter import NewsletterSubscriber
 from app.core.database import get_db
+from app.services.email_service import send_admin_newsletter_notification
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from app.routes.auth import get_current_admin
@@ -11,6 +12,9 @@ import smtplib
 from email.message import EmailMessage
 
 router = APIRouter()
+
+# Admin email configuration
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "owarieta24@gmail.com")
 
 # Helper: validate newsletter fields
 def validate_newsletter(data: NewsletterCreate):
@@ -24,14 +28,27 @@ def subscribe_newsletter(data: NewsletterCreate, db: Session = Depends(get_db)):
     existing = db.query(NewsletterSubscriber).filter(NewsletterSubscriber.email == data.email).first()
     if existing:
         return {"message": "Email already subscribed.", "success": False}
+    
     new_sub = NewsletterSubscriber(email=data.email, is_active=True, subscribed_at=datetime.utcnow())
     db.add(new_sub)
     db.commit()
     db.refresh(new_sub)
+    
+    # Get total subscriber count for admin notification
+    total_subscribers = db.query(NewsletterSubscriber).count()
+    
     # Send welcome email to client
     send_newsletter_welcome_email(data.email)
-    # Send lead notification to owner
-    send_newsletter_lead_notification(data.email)
+    
+    # Send admin notification
+    try:
+        send_admin_newsletter_notification(ADMIN_EMAIL, {
+            'email': data.email,
+            'total_subscribers': total_subscribers
+        })
+    except Exception as e:
+        print(f"Failed to send admin notification: {e}")
+    
     return {"message": "Subscribed successfully.", "success": True, "subscriber": {"email": new_sub.email}}
 
 @router.get("/admin", response_model=List[Newsletter], summary="Get All Newsletter Subscribers (Admin)")
@@ -107,7 +124,7 @@ def send_newsletter_lead_notification(email):
     smtp_user = os.getenv("ZOHO_SMTP_USER")
     smtp_pass = os.getenv("ZOHO_SMTP_PASS")
     from_email = os.getenv("EMAIL_FROM")
-    owner_email = from_email
+    owner_email = ADMIN_EMAIL
     subject = "New Newsletter Subscriber"
     html_content = f"""
     <html><body style='font-family:Segoe UI,Arial,sans-serif;background:#f9f9fb;padding:0;margin:0;'>

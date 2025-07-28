@@ -3,10 +3,15 @@ from typing import List
 from app.schemas.review import Review as ReviewSchema, ReviewCreate, ReviewUpdate
 from app.models.review import Review
 from app.core.database import get_db
+from app.services.email_service import send_admin_review_notification
 from sqlalchemy.orm import Session
 from app.routes.auth import get_current_admin
+import os
 
 router = APIRouter()
+
+# Admin email configuration
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "owarieta24@gmail.com")
 
 # Helper: validate review fields
 def validate_review(data: ReviewCreate):
@@ -50,10 +55,23 @@ def create_review(data: ReviewCreate, db: Session = Depends(get_db)):
         validate_review(data)
     except HTTPException as e:
         return {"message": str(e.detail), "success": False}
+    
     new_review = Review(**data.model_dump())
     db.add(new_review)
     db.commit()
     db.refresh(new_review)
+    
+    # Send admin notification
+    try:
+        send_admin_review_notification(ADMIN_EMAIL, {
+            'client_name': data.client_name,
+            'client_email': data.client_email,
+            'rating': data.rating,
+            'comment': data.review_text
+        })
+    except Exception as e:
+        print(f"Failed to send admin notification: {e}")
+    
     return {"message": "Review created successfully.", "success": True, "review": new_review}
 
 @router.put("/{review_id}", summary="Update Review")
