@@ -113,8 +113,13 @@ def reset_password(request: ResetPasswordRequest):
         
         # Create reset URL (in production, use your actual frontend URL)
         base_url = os.getenv("FRONTEND_URL", "https://portfolio-heart.vercel.app")
+        # Force the correct URL if the environment variable is wrong
+        if "stanley-o.vercel.app" in base_url:
+            base_url = "https://portfolio-heart.vercel.app"
+            print(f"[DEBUG] Corrected base URL to: {base_url}")
         reset_url = f"{base_url}/admin/reset-password?token={reset_token}"
         print(f"[DEBUG] Reset URL: {reset_url}")
+        print(f"[DEBUG] Base URL from env: {os.getenv('FRONTEND_URL', 'NOT SET')}")
         
         # Send the email
         print(f"[DEBUG] Attempting to send email...")
