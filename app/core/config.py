@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     
     # GeoIP Database
     GEOIP_DATABASE_PATH: Optional[str] = None
+    MAXMIND_LICENSE_KEY: Optional[str] = None
     
     # Google Calendar & OAuth
     GOOGLE_CALENDAR_ID: Optional[str] = None

@@ -26,9 +26,13 @@ class AnalyticsTracker:
         self.geoip_reader = None
         try:
             geoip_path = os.getenv("GEOIP_DATABASE_PATH", "GeoLite2-City.mmdb")
+            logger.info(f"GEOIP_DATABASE_PATH environment variable: {geoip_path}")
+            logger.info(f"File exists: {os.path.exists(geoip_path)}")
             if os.path.exists(geoip_path):
                 self.geoip_reader = geoip2.database.Reader(geoip_path)
                 logger.info("GeoIP database loaded successfully")
+            else:
+                logger.warning(f"GeoIP database file not found at: {geoip_path}")
         except Exception as e:
             logger.warning(f"Could not load GeoIP database: {e}")
     
@@ -159,12 +163,16 @@ class AnalyticsTracker:
     
     def _get_geographic_data(self, ip_address: str) -> Optional[Dict]:
         """Get geographic data for an IP address"""
+        logger.info(f"Getting geographic data for IP: {ip_address}")
+        logger.info(f"GeoIP reader available: {self.geoip_reader is not None}")
+        
         if not self.geoip_reader or ip_address in ["127.0.0.1", "localhost", "unknown"]:
+            logger.info(f"Skipping geographic lookup for IP: {ip_address} (localhost or no reader)")
             return None
         
         try:
             response = self.geoip_reader.city(ip_address)
-            return {
+            geo_data = {
                 "country": response.country.name,
                 "country_code": response.country.iso_code,
                 "city": response.city.name,
@@ -172,7 +180,10 @@ class AnalyticsTracker:
                 "longitude": response.location.longitude,
                 "timezone": response.location.time_zone
             }
+            logger.info(f"Found geographic data for {ip_address}: {geo_data}")
+            return geo_data
         except (geoip2.errors.AddressNotFoundError, geoip2.errors.GeoIP2Error):
+            logger.warning(f"Address not found in GeoIP database: {ip_address}")
             return None
         except Exception as e:
             logger.error(f"Error getting geographic data for {ip_address}: {e}")
