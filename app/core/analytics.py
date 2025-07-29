@@ -451,9 +451,10 @@ class AnalyticsTracker:
     def _calculate_bounce_rate(self, sessions: List[Dict]) -> float:
         """Calculate bounce rate (sessions with only one page view)"""
         if not sessions:
-            return 0
-        bounce_sessions = sum(1 for session in sessions if len(session["pages"]) == 1)
-        return round((bounce_sessions / len(sessions) * 100), 2)
+            return 0.0
+        
+        single_page_sessions = sum(1 for session in sessions if len(session["pages"]) == 1)
+        return (single_page_sessions / len(sessions)) * 100
 
-# Global analytics instance
+# Initialize the analytics tracker
 analytics_tracker = AnalyticsTracker() 
