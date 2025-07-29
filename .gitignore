@@ -1,6 +1,6 @@
 .env
 venv310
-.venv 
+venv 
 app/credentials/google_service_account.json
 
 
