@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     GOOGLE_SERVICE_ACCOUNT_JSON: Optional[str] = None
     PYTHON_VERSION: Optional[str] = None
     
+    # GeoIP Database
+    GEOIP_DATABASE_PATH: Optional[str] = None
+    
     # Google Calendar & OAuth
     GOOGLE_CALENDAR_ID: Optional[str] = None
     GOOGLE_OAUTH_CLIENT_ID: Optional[str] = None
